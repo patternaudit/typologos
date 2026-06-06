@@ -225,16 +225,29 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 }
 .draft-slot {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   min-width: 150px;
-  padding: 6px 12px;
+  padding: 6px 8px 6px 12px;
   border: 1px dashed var(--panel-edge);
   border-radius: 8px;
   background: #fffdf8;
 }
 .draft-slot.filled { border-style: solid; border-color: var(--highlight-strong); background: #fff8ea; }
+.draft-slot-main { display: flex; flex-direction: column; min-width: 0; }
 .draft-slot-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
 .draft-slot-text { font-size: 13px; color: var(--ink); }
+.slot-delete {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1;
+}
+.slot-delete:not(:disabled):hover { background: #f3d9d6; color: #a8413c; transform: none; }
 .draft-arrow { font-size: 20px; }
 
 .link-builder-fields {

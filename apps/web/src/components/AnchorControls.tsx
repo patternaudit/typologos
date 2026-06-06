@@ -8,6 +8,7 @@ interface AnchorControlsProps {
   targetAnchor: Anchor | null;
   busy: boolean;
   onClear: () => void;
+  onDeleteAnchor: (anchorId: string) => void;
   onCreate: (input: {
     type: RelationshipType;
     title: string;
@@ -25,6 +26,7 @@ export function AnchorControls({
   targetAnchor,
   busy,
   onClear,
+  onDeleteAnchor,
   onCreate,
 }: AnchorControlsProps) {
   const [type, setType] = useState<RelationshipType>("typology");
@@ -47,17 +49,41 @@ export function AnchorControls({
 
       <div className="draft-anchors">
         <div className={`draft-slot ${sourceAnchor ? "filled" : ""}`}>
-          <span className="draft-slot-label">Source · left</span>
-          <span className="draft-slot-text">
-            {sourceAnchor ? truncate(sourceAnchor.selectedText) : "click a left highlight"}
-          </span>
+          <div className="draft-slot-main">
+            <span className="draft-slot-label">Source · left</span>
+            <span className="draft-slot-text">
+              {sourceAnchor ? truncate(sourceAnchor.selectedText) : "click a left highlight"}
+            </span>
+          </div>
+          {sourceAnchor && (
+            <button
+              className="slot-delete"
+              title="Delete this anchor (and any links using it)"
+              disabled={busy}
+              onClick={() => onDeleteAnchor(sourceAnchor.id)}
+            >
+              ✕
+            </button>
+          )}
         </div>
         <div className="draft-arrow" style={{ color: colorFor(type) }}>→</div>
         <div className={`draft-slot ${targetAnchor ? "filled" : ""}`}>
-          <span className="draft-slot-label">Target · right</span>
-          <span className="draft-slot-text">
-            {targetAnchor ? truncate(targetAnchor.selectedText) : "click a right highlight"}
-          </span>
+          <div className="draft-slot-main">
+            <span className="draft-slot-label">Target · right</span>
+            <span className="draft-slot-text">
+              {targetAnchor ? truncate(targetAnchor.selectedText) : "click a right highlight"}
+            </span>
+          </div>
+          {targetAnchor && (
+            <button
+              className="slot-delete"
+              title="Delete this anchor (and any links using it)"
+              disabled={busy}
+              onClick={() => onDeleteAnchor(targetAnchor.id)}
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 

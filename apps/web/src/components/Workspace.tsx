@@ -129,6 +129,32 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     setDraftTargetId(null);
   }, []);
 
+  const deleteAnchor = useCallback(
+    async (anchorId: string) => {
+      setBusy(true);
+      try {
+        await api.deleteAnchor(anchorId);
+        if (draftSourceId === anchorId) setDraftSourceId(null);
+        if (draftTargetId === anchorId) setDraftTargetId(null);
+        // If the open inspector belonged to a link that referenced this anchor,
+        // that link is gone now — close it.
+        const openLink = data?.links.find((l) => l.id === selectedLinkId);
+        if (
+          openLink &&
+          (openLink.sourceAnchorId === anchorId || openLink.targetAnchorId === anchorId)
+        ) {
+          setSelectedLinkId(null);
+        }
+        await reload();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [draftSourceId, draftTargetId, selectedLinkId, data, reload],
+  );
+
   // --- link creation / deletion ---------------------------------------------
 
   const createLink = useCallback(
@@ -255,6 +281,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
           busy={busy}
           onClear={clearDraft}
           onCreate={createLink}
+          onDeleteAnchor={deleteAnchor}
         />
       </footer>
 

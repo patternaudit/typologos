@@ -27,6 +27,12 @@ export function createAnchor(input: CreateAnchorInput): Promise<Anchor> {
   }).then((r) => json<Anchor>(r));
 }
 
+export function deleteAnchor(id: string): Promise<{ ok: true }> {
+  return fetch(`/api/anchors/${id}`, { method: "DELETE" }).then((r) =>
+    json<{ ok: true }>(r),
+  );
+}
+
 export function createLink(input: CreateLinkInput): Promise<Link> {
   return fetch("/api/links", {
     method: "POST",

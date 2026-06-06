@@ -153,6 +153,17 @@ app.post("/api/anchors", async (c) => {
   return c.json(toAnchor(row), 201);
 });
 
+app.delete("/api/anchors/:id", (c) => {
+  const id = c.req.param("id");
+  const existing = db.prepare("SELECT * FROM anchors WHERE id = ?").get(id) as Row | undefined;
+  if (!existing) return c.json({ error: "anchor not found" }, 404);
+  // An anchor can't outlive its links: drop any link that references it on
+  // either side, then the anchor itself.
+  db.prepare("DELETE FROM links WHERE source_anchor_id = ? OR target_anchor_id = ?").run(id, id);
+  db.prepare("DELETE FROM anchors WHERE id = ?").run(id);
+  return c.json({ ok: true });
+});
+
 app.post("/api/links", async (c) => {
   const body = await c.req.json<CreateLinkInput>();
   if (!body.workspaceId || !body.sourceAnchorId || !body.targetAnchorId || !body.type) {
