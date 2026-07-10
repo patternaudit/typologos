@@ -21,13 +21,66 @@ persisted in SQLite.
 
 ```bash
 npm install
-npm run db:setup     # create tables + seed the Genesis 22 ↔ John 3 workspace
-npm run dev          # server on :5179, web on :5173
+npm run db:setup       # create tables + seed the Genesis 22 ↔ John 3 demo
+npm run corpus:import  # download + import the full KJV (OSIS -> documents + segments)
+npm run motifs:import  # parse Wilson's "A Dictionary of Bible Types" into motifs
+npm run dev            # server on :5179, web on :5173
 ```
 
-Open http://localhost:5173 — it boots straight into the seeded workspace.
+Open http://localhost:5173 — it boots into the seeded demo workspace. Use the
+per-pane navigator (top-right of each pane) to jump anywhere in the KJV.
 
-To reset the data at any time: `npm run db:seed` (idempotent).
+To reset the demo at any time: `npm run db:seed` (idempotent, and leaves the
+imported corpus untouched).
+
+## Corpus model
+
+The KJV is sourced from `eng-kjv.osis.xml`
+([seven1m/open-bibles](https://github.com/seven1m/open-bibles)) and imported into:
+
+- **documents** — one per book (id `kjv-<osisId>`, e.g. `kjv-John`). Bodies are
+  empty; we never render a whole book.
+- **segments** — chapters and verses (`kind` = `chapter` | `verse`). Verse
+  segments hold the text.
+
+Panes render **windows** (a chapter, optionally a verse range), never whole
+books. Anchors created in a corpus passage target a verse:
+`anchor.segment_id + start_offset + end_offset` (offsets local to the verse).
+Legacy standalone documents still work — those anchors have `segment_id = null`
+and offset into the document body.
+
+The seeded demo workspace uses legacy standalone documents; navigate either pane
+into the corpus to create verse-anchored links. Navigation is remembered
+(localStorage) so a refresh keeps your place, and the segment anchors + links
+persist in SQLite.
+
+## Motif reference layer (Wilson's Dictionary of Bible Types)
+
+`npm run motifs:import` parses the OCR'd text of Walter L. Wilson's
+*A Dictionary of Bible Types* (`apps/server/data/`) into two tables:
+
+- **motifs** — one per dictionary headword (Aaron, Lamb, Rock, …), ~1,100 total.
+- **motif_instances** — one per verse reference inside an entry (~4,100),
+  anchored to the KJV verse segment, carrying Wilson's rationale paragraph and
+  his own confidence grade: **(a)** pure types identified as such by Scripture,
+  **(b)** evident from usage, **(c)** suggestive/devotional.
+
+The parser is defensive about the scrape's OCR noise: it strips page chrome,
+excises the interleaved topical-index pages, recovers book numbers the OCR ate
+("| Timothy" → 1 Timothy, backed by the e-text's numeric verse codes), and
+resolves ~99.9% of graded references to actual verse segments. Re-running the
+import replaces the previous Wilson data wholesale (idempotent).
+
+This is a *reference layer*, distinct from user-authored links: instances carry
+`source = 'wilson-dbt'` provenance. Note Wilson (1957, Moody Press) is likely
+still under copyright — fine for personal research use; resolve before
+publishing the imported data.
+
+In the UI (corpus passages only): each verse that Wilson annotates gets a small
+amber count badge beside its verse number. Clicking it opens the **Types &
+figures** drawer — headword, Wilson's grade chip (a/b/c), and his rationale.
+"Everywhere X appears" expands a motif into all of its passages; clicking one
+opens that passage in the *opposite* pane, scrolled to the verse.
 
 ## How the flow works
 
@@ -50,10 +103,15 @@ packages/shared  shared domain types
 ## API
 
 ```
-GET    /api/workspaces/:id    # full hydrated workspace { workspace, panes[], links[] }
+GET    /api/workspaces/:id              # hydrated { workspace, panes[], links[], linkAnchors[] }
 GET    /api/documents/:id
-POST   /api/anchors
+GET    /api/books                       # imported corpus books (for the navigator)
+GET    /api/passages/:documentId/:chapter?startVerse=&endVerse=   # a passage window
+GET    /api/passages/:documentId/:chapter/motifs?startVerse=&endVerse=  # motif instances in a window
+GET    /api/motifs/:id                  # one motif + all its instances
+POST   /api/anchors                     # accepts optional segmentId
 POST   /api/links
 PATCH  /api/links/:id
 DELETE /api/links/:id
+DELETE /api/anchors/:id                 # cascades to dependent links
 ```

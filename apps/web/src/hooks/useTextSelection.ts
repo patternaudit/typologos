@@ -1,43 +1,55 @@
-// Maps a live DOM selection inside a passage body element back to character
-// offsets in the original `body` string.
+// Maps a live DOM selection back to character offsets inside a single "block".
 //
-// Trick: a passage body renders *exactly* the body string (anchor highlights
-// are nested spans, but no extra characters are added). So the number of
-// characters between the container start and a selection endpoint equals that
-// endpoint's offset into `body`. We measure that with a Range.
+// A block is one measured text region: a whole legacy document body, or a single
+// corpus verse. Each block element carries `data-block-key` and renders EXACTLY
+// its body string (anchor highlights are nested spans, but add no characters).
+// So the number of characters from the block start to a selection endpoint is
+// that endpoint's offset into the block body.
+//
+// Selections that spill past the start block are clamped to that block — boring
+// and predictable for the MVP.
 
-export interface SelectionOffsets {
+export interface BlockSelection {
+  blockKey: string;
   start: number;
   end: number;
   text: string;
 }
 
-function offsetWithin(container: HTMLElement, node: Node, nodeOffset: number): number {
+function offsetWithin(blockEl: HTMLElement, node: Node, nodeOffset: number): number {
   const range = document.createRange();
-  range.selectNodeContents(container);
+  range.selectNodeContents(blockEl);
   range.setEnd(node, nodeOffset);
   return range.toString().length;
 }
 
-export function getSelectionOffsets(
-  container: HTMLElement,
-  body: string,
-): SelectionOffsets | null {
+function closestBlock(node: Node | null, root: HTMLElement): HTMLElement | null {
+  let el = node && node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element | null);
+  while (el && el !== root) {
+    if (el instanceof HTMLElement && el.dataset.blockKey != null) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+export function getSelectionOffsets(root: HTMLElement): BlockSelection | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
 
   const range = sel.getRangeAt(0);
-  if (
-    !container.contains(range.startContainer) ||
-    !container.contains(range.endContainer)
-  ) {
-    return null;
-  }
+  if (!root.contains(range.startContainer)) return null;
 
-  let start = offsetWithin(container, range.startContainer, range.startOffset);
-  let end = offsetWithin(container, range.endContainer, range.endOffset);
+  const blockEl = closestBlock(range.startContainer, root);
+  if (!blockEl || blockEl.dataset.blockKey == null) return null;
+
+  let start = offsetWithin(blockEl, range.startContainer, range.startOffset);
+  let end = blockEl.contains(range.endContainer)
+    ? offsetWithin(blockEl, range.endContainer, range.endOffset)
+    : (blockEl.textContent ?? "").length; // selection ran past this block — clamp
+
   if (start === end) return null;
   if (start > end) [start, end] = [end, start];
 
-  return { start, end, text: body.slice(start, end) };
+  const body = blockEl.textContent ?? "";
+  return { blockKey: blockEl.dataset.blockKey, start, end, text: body.slice(start, end) };
 }

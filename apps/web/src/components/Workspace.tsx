@@ -1,68 +1,160 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Anchor,
+  BookSummary,
   HydratedWorkspace,
   PaneSide,
+  PassageMotifInstance,
+  PassageWindow,
   RelationshipType,
 } from "@typologos/shared";
 import * as api from "../api/client";
 import { useAnchorRects } from "../hooks/useAnchorRects";
-import type { SelectionOffsets } from "../hooks/useTextSelection";
+import type { Block, PaneData, PaneView, PendingSelection } from "../viewTypes";
 import { PassagePane } from "./PassagePane";
 import { ConnectorOverlay } from "./ConnectorOverlay";
 import { AnchorControls } from "./AnchorControls";
 import { LinkInspector } from "./LinkInspector";
+import { MotifPanel } from "./MotifPanel";
 
 interface WorkspaceProps {
   workspaceId: string;
 }
 
+type SideViews = { left: PaneView | null; right: PaneView | null };
+type SidePassages = { left: PassageWindow | null; right: PassageWindow | null };
+type SideMotifs = { left: PassageMotifInstance[]; right: PassageMotifInstance[] };
+
+// Which verse's motif drawer is open, and in which pane it was opened.
+interface MotifPanelState {
+  side: PaneSide;
+  segmentId: string;
+  refLabel: string;
+}
+
 export function Workspace({ workspaceId }: WorkspaceProps) {
   const [data, setData] = useState<HydratedWorkspace | null>(null);
+  const [books, setBooks] = useState<BookSummary[]>([]);
+  const [views, setViews] = useState<SideViews>({ left: null, right: null });
+  const [passages, setPassages] = useState<SidePassages>({ left: null, right: null });
+  const [motifs, setMotifs] = useState<SideMotifs>({ left: [], right: [] });
+  const [motifPanel, setMotifPanel] = useState<MotifPanelState | null>(null);
+  // Verse block to scroll into view once its pane has rendered (segment id).
+  const [scrollTargets, setScrollTargets] = useState<{
+    left: string | null;
+    right: string | null;
+  }>({ left: null, right: null });
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState(false);
 
-  const [leftSelection, setLeftSelection] = useState<SelectionOffsets | null>(null);
-  const [rightSelection, setRightSelection] = useState<SelectionOffsets | null>(null);
+  const [leftSelection, setLeftSelection] = useState<PendingSelection | null>(null);
+  const [rightSelection, setRightSelection] = useState<PendingSelection | null>(null);
   const [draftSourceId, setDraftSourceId] = useState<string | null>(null);
   const [draftTargetId, setDraftTargetId] = useState<string | null>(null);
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
 
   const mainRef = useRef<HTMLDivElement>(null);
+  const viewsKey = `typologos:views:${workspaceId}`;
+  const bumpLayout = useCallback(() => setVersion((v) => v + 1), []);
 
   const reload = useCallback(async () => {
     try {
       const next = await api.fetchWorkspace(workspaceId);
       setData(next);
-      setVersion((v) => v + 1);
+      bumpLayout();
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [workspaceId]);
+  }, [workspaceId, bumpLayout]);
 
   useEffect(() => {
     reload();
+    api.fetchBooks().then(setBooks).catch(() => setBooks([]));
   }, [reload]);
+
+  // Initialise pane views once data is available: restore saved navigation, or
+  // default both panes to their seeded documents.
+  useEffect(() => {
+    if (!data || (views.left && views.right)) return;
+    const leftPane = data.panes.find((p) => p.side === "left");
+    const rightPane = data.panes.find((p) => p.side === "right");
+    if (!leftPane || !rightPane) return;
+
+    let saved: SideViews | null = null;
+    try {
+      const raw = localStorage.getItem(viewsKey);
+      if (raw) saved = JSON.parse(raw);
+    } catch {
+      saved = null;
+    }
+    setViews(
+      saved?.left && saved?.right
+        ? saved
+        : {
+            left: { mode: "document", documentId: leftPane.document.id },
+            right: { mode: "document", documentId: rightPane.document.id },
+          },
+    );
+  }, [data, views, viewsKey]);
+
+  // Persist navigation.
+  useEffect(() => {
+    if (views.left && views.right) {
+      try {
+        localStorage.setItem(viewsKey, JSON.stringify(views));
+      } catch {
+        /* ignore quota errors */
+      }
+    }
+  }, [views, viewsKey]);
+
+  const fetchSide = useCallback(
+    async (side: PaneSide, view: PaneView | null) => {
+      if (!view || view.mode !== "passage") {
+        setPassages((p) => ({ ...p, [side]: null }));
+        setMotifs((m) => ({ ...m, [side]: [] }));
+        return;
+      }
+      try {
+        const [pw, mi] = await Promise.all([
+          api.fetchPassage(view.bookId, view.chapter, view.startVerse, view.endVerse),
+          // Motifs are decoration: a failure shouldn't block the passage.
+          api
+            .fetchPassageMotifs(view.bookId, view.chapter, view.startVerse, view.endVerse)
+            .catch(() => [] as PassageMotifInstance[]),
+        ]);
+        setPassages((p) => ({ ...p, [side]: pw }));
+        setMotifs((m) => ({ ...m, [side]: mi }));
+        bumpLayout();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [bumpLayout],
+  );
+
+  // Load passages whenever a side's view changes.
+  useEffect(() => {
+    fetchSide("left", views.left);
+  }, [views.left, fetchSide]);
+  useEffect(() => {
+    fetchSide("right", views.right);
+  }, [views.right, fetchSide]);
 
   const rects = useAnchorRects(mainRef, version);
 
-  const leftPane = data?.panes.find((p) => p.side === "left") ?? null;
-  const rightPane = data?.panes.find((p) => p.side === "right") ?? null;
-
-  // Index every anchor by id, and remember which side it lives on.
-  const { anchorsById, sideByAnchorId } = useMemo(() => {
+  // Merge every anchor we know about (link endpoints + loaded passages) so draft
+  // slots, the inspector, and highlights all resolve by id.
+  const anchorsById = useMemo(() => {
     const byId = new Map<string, Anchor>();
-    const sideById = new Map<string, PaneSide>();
-    for (const pane of data?.panes ?? []) {
-      for (const a of pane.anchors) {
-        byId.set(a.id, a);
-        sideById.set(a.id, pane.side);
-      }
-    }
-    return { anchorsById: byId, sideByAnchorId: sideById };
-  }, [data]);
+    for (const a of data?.linkAnchors ?? []) byId.set(a.id, a);
+    for (const pane of data?.panes ?? []) for (const a of pane.anchors) byId.set(a.id, a);
+    for (const a of passages.left?.anchors ?? []) byId.set(a.id, a);
+    for (const a of passages.right?.anchors ?? []) byId.set(a.id, a);
+    return byId;
+  }, [data, passages]);
 
   const linkedAnchorIds = useMemo(() => {
     const set = new Set<string>();
@@ -73,61 +165,212 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     return set;
   }, [data]);
 
+  // Motif instances keyed by the verse segment they annotate, per side.
+  const motifsBySegment = useMemo(() => {
+    const build = (list: PassageMotifInstance[]) => {
+      const map = new Map<string, PassageMotifInstance[]>();
+      for (const mi of list) {
+        if (!mi.segmentId) continue;
+        const entry = map.get(mi.segmentId) ?? [];
+        entry.push(mi);
+        map.set(mi.segmentId, entry);
+      }
+      return map;
+    };
+    return { left: build(motifs.left), right: build(motifs.right) };
+  }, [motifs]);
+
   const selectedLink = data?.links.find((l) => l.id === selectedLinkId) ?? null;
   const selectedLinkAnchorIds = useMemo(() => {
     if (!selectedLink) return new Set<string>();
     return new Set([selectedLink.sourceAnchorId, selectedLink.targetAnchorId]);
   }, [selectedLink]);
 
+  // --- pane data (blocks) ----------------------------------------------------
+
+  const paneData = useCallback(
+    (side: PaneSide, view: PaneView | null): PaneData | null => {
+      if (!view || !data) return null;
+      if (view.mode === "document") {
+        const pane = data.panes.find((p) => p.side === side);
+        if (!pane) return null;
+        const doc = pane.document;
+        return {
+          title: doc.title,
+          reference: doc.reference,
+          blocks: [
+            {
+              key: doc.id,
+              segmentId: null,
+              documentId: doc.id,
+              passageRef: doc.reference,
+              body: doc.body,
+              anchors: pane.anchors,
+            },
+          ],
+        };
+      }
+
+      const pw = passages[side];
+      // Still loading (or stale for a different chapter).
+      if (!pw || pw.document.id !== view.bookId || pw.chapter !== view.chapter) return null;
+
+      const anchorsBySeg = new Map<string, Anchor[]>();
+      for (const a of pw.anchors) {
+        if (!a.segmentId) continue;
+        const list = anchorsBySeg.get(a.segmentId) ?? [];
+        list.push(a);
+        anchorsBySeg.set(a.segmentId, list);
+      }
+
+      const blocks = pw.verses.map((v) => ({
+        key: v.id,
+        segmentId: v.id,
+        documentId: view.bookId,
+        passageRef: v.ref,
+        verseLabel: v.verse != null ? String(v.verse) : undefined,
+        body: v.body,
+        anchors: anchorsBySeg.get(v.id) ?? [],
+      }));
+
+      const name = pw.document.title;
+      const first = pw.verses[0]?.verse ?? null;
+      const last = pw.verses[pw.verses.length - 1]?.verse ?? null;
+      let reference = `${name} ${view.chapter}`;
+      if ((view.startVerse != null || view.endVerse != null) && first != null && last != null) {
+        reference =
+          first === last
+            ? `${name} ${view.chapter}:${first}`
+            : `${name} ${view.chapter}:${first}–${last}`;
+      }
+      return { title: name, reference, blocks };
+    },
+    [data, passages],
+  );
+
+  const leftData = paneData("left", views.left);
+  const rightData = paneData("right", views.right);
+
+  // --- navigation ------------------------------------------------------------
+
+  const navigate = useCallback(
+    (side: PaneSide, view: PaneView) => {
+      setViews((v) => ({ ...v, [side]: view }));
+      if (side === "left") setLeftSelection(null);
+      else setRightSelection(null);
+      // The drawer's verse leaves the screen with its pane.
+      setMotifPanel((p) => (p?.side === side ? null : p));
+    },
+    [],
+  );
+
+  const refreshSide = useCallback(
+    (side: PaneSide) => {
+      const view = side === "left" ? views.left : views.right;
+      if (view?.mode === "passage") return fetchSide(side, view);
+      return reload();
+    },
+    [views, fetchSide, reload],
+  );
+
   // --- anchor creation -------------------------------------------------------
 
   const createAnchor = useCallback(
     async (side: PaneSide) => {
-      const pane = side === "left" ? leftPane : rightPane;
       const selection = side === "left" ? leftSelection : rightSelection;
-      if (!pane || !selection) return;
+      if (!selection) return;
       setBusy(true);
       try {
         const anchor = await api.createAnchor({
-          documentId: pane.document.id,
-          passageRef: pane.document.reference,
+          documentId: selection.documentId,
+          segmentId: selection.segmentId,
+          passageRef: selection.passageRef,
           startOffset: selection.start,
           endOffset: selection.end,
           selectedText: selection.text,
         });
         window.getSelection()?.removeAllRanges();
-        if (side === "left") {
-          setLeftSelection(null);
-          setDraftSourceId(anchor.id);
-        } else {
-          setRightSelection(null);
-          setDraftTargetId(anchor.id);
-        }
-        await reload();
+        if (side === "left") setLeftSelection(null);
+        else setRightSelection(null);
+        await refreshSide(side);
+        if (side === "left") setDraftSourceId(anchor.id);
+        else setDraftTargetId(anchor.id);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         setBusy(false);
       }
     },
-    [leftPane, rightPane, leftSelection, rightSelection, reload],
+    [leftSelection, rightSelection, refreshSide],
   );
 
-  // --- draft picking ---------------------------------------------------------
+  // --- draft picking & deletion ----------------------------------------------
+
+  const sideOfAnchor = useCallback(
+    (anchorId: string): PaneSide | null => {
+      if ((leftData?.blocks ?? []).some((b) => b.anchors.some((a) => a.id === anchorId)))
+        return "left";
+      if ((rightData?.blocks ?? []).some((b) => b.anchors.some((a) => a.id === anchorId)))
+        return "right";
+      return null;
+    },
+    [leftData, rightData],
+  );
 
   const handleAnchorClick = useCallback(
     (anchor: Anchor) => {
-      const side = sideByAnchorId.get(anchor.id);
+      const side = sideOfAnchor(anchor.id);
       if (side === "left") setDraftSourceId(anchor.id);
       else if (side === "right") setDraftTargetId(anchor.id);
     },
-    [sideByAnchorId],
+    [sideOfAnchor],
   );
 
   const clearDraft = useCallback(() => {
     setDraftSourceId(null);
     setDraftTargetId(null);
   }, []);
+
+  // --- motif drawer ------------------------------------------------------------
+
+  // The motif drawer and the link inspector share the right rail: opening one
+  // closes the other.
+  const openMotifPanel = useCallback((side: PaneSide, block: Block) => {
+    if (!block.segmentId) return;
+    setSelectedLinkId(null);
+    setMotifPanel({ side, segmentId: block.segmentId, refLabel: block.passageRef });
+  }, []);
+
+  const selectLink = useCallback((id: string | null) => {
+    setSelectedLinkId(id);
+    if (id) setMotifPanel(null);
+  }, []);
+
+  // From the drawer, open a referenced passage in the opposite pane and land
+  // on the verse (segment ids are deterministic: seg-<doc>-<ch>-<v>).
+  const navigateOppositePane = useCallback(
+    (documentId: string, chapter: number, verse: number) => {
+      if (!motifPanel) return;
+      const other: PaneSide = motifPanel.side === "left" ? "right" : "left";
+      navigate(other, {
+        mode: "passage",
+        bookId: documentId,
+        chapter,
+        startVerse: null,
+        endVerse: null,
+      });
+      setScrollTargets((t) => ({ ...t, [other]: `seg-${documentId}-${chapter}-${verse}` }));
+    },
+    [motifPanel, navigate],
+  );
+
+  const consumeScrollTarget = useCallback((side: PaneSide) => {
+    setScrollTargets((t) => (t[side] ? { ...t, [side]: null } : t));
+  }, []);
+
+  const motifPanelInstances = motifPanel
+    ? motifsBySegment[motifPanel.side].get(motifPanel.segmentId) ?? []
+    : [];
 
   const deleteAnchor = useCallback(
     async (anchorId: string) => {
@@ -136,8 +379,6 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
         await api.deleteAnchor(anchorId);
         if (draftSourceId === anchorId) setDraftSourceId(null);
         if (draftTargetId === anchorId) setDraftTargetId(null);
-        // If the open inspector belonged to a link that referenced this anchor,
-        // that link is gone now — close it.
         const openLink = data?.links.find((l) => l.id === selectedLinkId);
         if (
           openLink &&
@@ -145,17 +386,17 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
         ) {
           setSelectedLinkId(null);
         }
-        await reload();
+        await Promise.all([reload(), fetchSide("left", views.left), fetchSide("right", views.right)]);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         setBusy(false);
       }
     },
-    [draftSourceId, draftTargetId, selectedLinkId, data, reload],
+    [draftSourceId, draftTargetId, selectedLinkId, data, reload, fetchSide, views],
   );
 
-  // --- link creation / deletion ---------------------------------------------
+  // --- link creation / deletion ----------------------------------------------
 
   const createLink = useCallback(
     async (input: { type: RelationshipType; title: string; rationale: string }) => {
@@ -203,12 +444,15 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
       <div className="fatal">
         <h1>Couldn’t load workspace</h1>
         <pre>{error}</pre>
-        <p>Is the API running on :5179? Try <code>npm run db:setup</code> then <code>npm run dev</code>.</p>
+        <p>
+          Is the API running on :5179? Try <code>npm run db:setup</code> then{" "}
+          <code>npm run dev</code>.
+        </p>
       </div>
     );
   }
 
-  if (!data || !leftPane || !rightPane) {
+  if (!data || !views.left || !views.right) {
     return <div className="loading">Loading workspace…</div>;
   }
 
@@ -216,16 +460,20 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     <div className="app">
       <header className="topbar">
         <div className="brand">Typologos</div>
-        <div className="ws-title">{data.workspace.title}</div>
+        <div className="ws-title">
+          {leftData && rightData
+            ? `${leftData.reference} ↔ ${rightData.reference}`
+            : data.workspace.title}
+        </div>
         <div className="selection-actions">
           <SelectionAction
-            label={leftPane.document.title}
+            label={leftData?.title ?? "Left"}
             selection={leftSelection}
             disabled={busy}
             onCreate={() => createAnchor("left")}
           />
           <SelectionAction
-            label={rightPane.document.title}
+            label={rightData?.title ?? "Right"}
             selection={rightSelection}
             disabled={busy}
             onCreate={() => createAnchor("right")}
@@ -235,31 +483,55 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
       <div className="workspace-main" ref={mainRef}>
         <div className="panes">
-          <PassagePane
-            pane={leftPane}
-            draftSourceId={draftSourceId}
-            draftTargetId={draftTargetId}
-            selectedLinkAnchorIds={selectedLinkAnchorIds}
-            linkedAnchorIds={linkedAnchorIds}
-            onSelectionChange={setLeftSelection}
-            onAnchorClick={handleAnchorClick}
-          />
-          <PassagePane
-            pane={rightPane}
-            draftSourceId={draftSourceId}
-            draftTargetId={draftTargetId}
-            selectedLinkAnchorIds={selectedLinkAnchorIds}
-            linkedAnchorIds={linkedAnchorIds}
-            onSelectionChange={setRightSelection}
-            onAnchorClick={handleAnchorClick}
-          />
+          {leftData ? (
+            <PassagePane
+              side="left"
+              data={leftData}
+              view={views.left}
+              books={books}
+              draftSourceId={draftSourceId}
+              draftTargetId={draftTargetId}
+              selectedLinkAnchorIds={selectedLinkAnchorIds}
+              linkedAnchorIds={linkedAnchorIds}
+              motifsBySegment={motifsBySegment.left}
+              scrollTargetKey={scrollTargets.left}
+              onScrollTargetDone={() => consumeScrollTarget("left")}
+              onNavigate={(v) => navigate("left", v)}
+              onSelectionChange={setLeftSelection}
+              onAnchorClick={handleAnchorClick}
+              onMotifVerseClick={(block) => openMotifPanel("left", block)}
+            />
+          ) : (
+            <div className="pane pane-loading">Loading passage…</div>
+          )}
+          {rightData ? (
+            <PassagePane
+              side="right"
+              data={rightData}
+              view={views.right}
+              books={books}
+              draftSourceId={draftSourceId}
+              draftTargetId={draftTargetId}
+              selectedLinkAnchorIds={selectedLinkAnchorIds}
+              linkedAnchorIds={linkedAnchorIds}
+              motifsBySegment={motifsBySegment.right}
+              scrollTargetKey={scrollTargets.right}
+              onScrollTargetDone={() => consumeScrollTarget("right")}
+              onNavigate={(v) => navigate("right", v)}
+              onSelectionChange={setRightSelection}
+              onAnchorClick={handleAnchorClick}
+              onMotifVerseClick={(block) => openMotifPanel("right", block)}
+            />
+          ) : (
+            <div className="pane pane-loading">Loading passage…</div>
+          )}
         </div>
 
         <ConnectorOverlay
           links={data.links}
           rects={rects}
           selectedLinkId={selectedLinkId}
-          onSelectLink={setSelectedLinkId}
+          onSelectLink={selectLink}
         />
 
         {selectedLink && (
@@ -270,6 +542,15 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             busy={busy}
             onClose={() => setSelectedLinkId(null)}
             onDelete={deleteSelectedLink}
+          />
+        )}
+
+        {motifPanel && (
+          <MotifPanel
+            refLabel={motifPanel.refLabel}
+            instances={motifPanelInstances}
+            onClose={() => setMotifPanel(null)}
+            onNavigateRef={navigateOppositePane}
           />
         )}
       </div>
@@ -285,14 +566,18 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
         />
       </footer>
 
-      {error && <div className="toast-error" onClick={() => setError(null)}>{error}</div>}
+      {error && (
+        <div className="toast-error" onClick={() => setError(null)}>
+          {error}
+        </div>
+      )}
     </div>
   );
 }
 
 interface SelectionActionProps {
   label: string;
-  selection: SelectionOffsets | null;
+  selection: PendingSelection | null;
   disabled: boolean;
   onCreate: () => void;
 }

@@ -7,16 +7,21 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "corpus:download": "mkdir -p data && curl -fsSL -o data/eng-kjv.osis.xml https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-kjv.osis.xml",
+    "corpus:import": "tsx src/corpus/import.ts",
+    "motifs:import": "tsx src/corpus/wilson.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "@typologos/shared": "*",
     "hono": "^4.6.14",
-    "nanoid": "^5.0.9"
+    "nanoid": "^5.0.9",
+    "sax": "^1.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/sax": "^1.2.7",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

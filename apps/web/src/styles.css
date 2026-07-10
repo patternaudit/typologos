@@ -142,12 +142,40 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 .pane[data-side="right"] { border-right: none; }
 
 .pane-header {
-  padding: 18px 30px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 30px 12px;
   border-bottom: 1px solid var(--panel-edge);
   background: linear-gradient(180deg, #fffefb, var(--panel));
 }
+.pane-heading { min-width: 0; }
 .pane-title { font-size: 20px; font-weight: 600; }
 .pane-reference { font-size: 13px; color: var(--ink-faint); margin-top: 2px; letter-spacing: 0.02em; }
+
+/* ---- per-pane corpus navigator ---- */
+.navigator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.navigator select,
+.navigator input {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+}
+.navigator .nav-book { max-width: 150px; }
+.navigator .nav-range { display: inline-flex; align-items: center; gap: 3px; color: var(--ink-faint); }
+.navigator .nav-range input { width: 46px; }
 
 .pane-scroll {
   flex: 1;
@@ -157,11 +185,32 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 
 .pane-body {
   padding: 24px 36px 80px;
-  white-space: pre-wrap;
   line-height: 1.85;
   font-size: 17px;
   color: var(--ink);
-  max-width: 620px;
+  max-width: 640px;
+}
+
+/* Legacy documents preserve their own line breaks; corpus verses flow as a
+   paragraph with small superscript verse numbers. */
+.doc-block { display: block; }
+.doc-block .block-text { white-space: pre-wrap; }
+.verse-block { display: inline; }
+.verse-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  vertical-align: super;
+  margin-right: 2px;
+  user-select: none;
+}
+
+.pane-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  font-style: italic;
 }
 
 /* ---------- anchors (highlights) ---------- */
@@ -321,6 +370,128 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 }
 .inspector-rationale { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-soft); }
 .inspector-actions { margin-top: 24px; }
+
+/* ---------- motif verses & drawer ---------- */
+
+/* Verse text that carries typological readings: a quiet dashed underline;
+   hover for a light highlight + tooltip brief, click to open the drawer. */
+.verse-block .block-text.has-motifs {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: rgba(184, 116, 42, 0.4);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: background 140ms ease;
+  border-radius: 4px;
+}
+.verse-block .block-text.has-motifs:hover {
+  background: rgba(246, 226, 189, 0.45);
+  text-decoration-color: var(--accent);
+}
+
+.motif-panel-kicker { margin-bottom: 0; }
+
+.motif-empty { font-size: 13px; color: var(--ink-faint); font-style: italic; }
+
+.motif-item {
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--panel-edge);
+}
+.motif-item:last-of-type { border-bottom: none; }
+
+.motif-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.motif-headword { font-size: 16px; font-weight: 600; }
+
+/* Wilson's grade, in the same quiet voice as the provenance note. */
+.motif-grade {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--ink-faint);
+  cursor: help;
+}
+
+.motif-rationale {
+  margin: 6px 0 8px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.motif-expand { font-size: 11px; padding: 3px 10px; border-radius: 999px; }
+
+.motif-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.motif-refs-loading { font-size: 11px; color: var(--ink-faint); font-style: italic; }
+
+.motif-ref-pill {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #fff8ea;
+  border: 1px solid var(--highlight-strong);
+  color: var(--ink-soft);
+}
+.motif-ref-pill.current { opacity: 0.5; cursor: default; }
+
+/* Instant cursor-following tooltip for annotated verses. */
+.motif-tooltip {
+  position: fixed;
+  z-index: 60;
+  min-width: 110px;
+  max-width: 200px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  animation: tipin 100ms ease;
+}
+@keyframes tipin { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+.motif-tooltip-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.motif-tooltip-word { font-weight: 600; }
+.motif-tooltip-grade { font-size: 11px; font-style: italic; color: var(--ink-faint); }
+.motif-tooltip-hint {
+  margin-top: 5px;
+  font-size: 10px;
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+/* Brief glow on the verse a drawer navigation landed on. */
+.verse-flash {
+  animation: verseflash 2.4s ease;
+  border-radius: 4px;
+}
+@keyframes verseflash {
+  0% { background: var(--highlight-strong); }
+  60% { background: var(--highlight); }
+  100% { background: transparent; }
+}
+
+.motif-panel-note {
+  margin-top: 20px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  font-style: italic;
+}
 
 /* ---------- states ---------- */
 

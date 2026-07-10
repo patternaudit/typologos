@@ -1,9 +1,13 @@
 import type {
   Anchor,
+  BookSummary,
   CreateAnchorInput,
   CreateLinkInput,
   HydratedWorkspace,
   Link,
+  MotifDetail,
+  PassageMotifInstance,
+  PassageWindow,
   UpdateLinkInput,
 } from "@typologos/shared";
 
@@ -17,6 +21,44 @@ async function json<T>(res: Response): Promise<T> {
 
 export function fetchWorkspace(id: string): Promise<HydratedWorkspace> {
   return fetch(`/api/workspaces/${id}`).then((r) => json<HydratedWorkspace>(r));
+}
+
+export function fetchBooks(): Promise<BookSummary[]> {
+  return fetch("/api/books").then((r) => json<BookSummary[]>(r));
+}
+
+export function fetchPassage(
+  documentId: string,
+  chapter: number,
+  startVerse?: number | null,
+  endVerse?: number | null,
+): Promise<PassageWindow> {
+  const params = new URLSearchParams();
+  if (startVerse != null) params.set("startVerse", String(startVerse));
+  if (endVerse != null) params.set("endVerse", String(endVerse));
+  const qs = params.toString();
+  return fetch(`/api/passages/${documentId}/${chapter}${qs ? `?${qs}` : ""}`).then((r) =>
+    json<PassageWindow>(r),
+  );
+}
+
+export function fetchPassageMotifs(
+  documentId: string,
+  chapter: number,
+  startVerse?: number | null,
+  endVerse?: number | null,
+): Promise<PassageMotifInstance[]> {
+  const params = new URLSearchParams();
+  if (startVerse != null) params.set("startVerse", String(startVerse));
+  if (endVerse != null) params.set("endVerse", String(endVerse));
+  const qs = params.toString();
+  return fetch(`/api/passages/${documentId}/${chapter}/motifs${qs ? `?${qs}` : ""}`).then((r) =>
+    json<PassageMotifInstance[]>(r),
+  );
+}
+
+export function fetchMotifDetail(id: string): Promise<MotifDetail> {
+  return fetch(`/api/motifs/${id}`).then((r) => json<MotifDetail>(r));
 }
 
 export function createAnchor(input: CreateAnchorInput): Promise<Anchor> {

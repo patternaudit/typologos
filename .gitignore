@@ -8,3 +8,9 @@ dist
 .DS_Store
 .env
 tmp
+
+# downloadable corpus source (re-fetch via npm run corpus:download)
+apps/server/data/
+
+# source books (copyrighted PDFs/scans — keep out of git)
+sources/

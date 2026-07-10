@@ -50,14 +50,14 @@ const JOHN_PHRASE = "his only Son";
 const gen = offsetsOf(GENESIS_22, GEN_PHRASE);
 const john = offsetsOf(JOHN_3, JOHN_PHRASE);
 
-// Reset (idempotent reseed).
-db.exec(`
-  DELETE FROM links;
-  DELETE FROM anchors;
-  DELETE FROM workspace_panes;
-  DELETE FROM workspaces;
-  DELETE FROM documents;
-`);
+// Reset ONLY the legacy demo (idempotent reseed). Crucially this must not touch
+// the imported KJV corpus (documents/segments with id like 'kjv-%') or anchors
+// targeting it.
+db.prepare("DELETE FROM links WHERE workspace_id = ?").run(WORKSPACE_ID);
+db.prepare("DELETE FROM anchors WHERE document_id IN (?, ?)").run(DOC_GENESIS, DOC_JOHN);
+db.prepare("DELETE FROM workspace_panes WHERE workspace_id = ?").run(WORKSPACE_ID);
+db.prepare("DELETE FROM workspaces WHERE id = ?").run(WORKSPACE_ID);
+db.prepare("DELETE FROM documents WHERE id IN (?, ?)").run(DOC_GENESIS, DOC_JOHN);
 
 const insertDoc = db.prepare(
   `INSERT INTO documents (id, title, reference, body, source, created_at, updated_at)
