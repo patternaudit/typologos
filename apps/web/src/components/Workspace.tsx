@@ -5,6 +5,7 @@ import type {
   BookSummary,
   HydratedWorkspace,
   PaneSide,
+  Parallel,
   PassageMotifInstance,
   RelationshipType,
 } from "@typologos/shared";
@@ -54,6 +55,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [views, setViews] = useState<SideViews>({ left: null, right: null });
   const [sideBooks, setSideBooks] = useState<SideBooks>({ left: null, right: null });
   const [motifs, setMotifs] = useState<SideMotifs>({ left: [], right: [] });
+  const [parallels, setParallels] = useState<Parallel[]>([]);
   const [motifPanel, setMotifPanel] = useState<MotifPanelState | null>(null);
   // Verse block to scroll into view once its pane has rendered (segment id).
   const [scrollTargets, setScrollTargets] = useState<{
@@ -88,6 +90,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   useEffect(() => {
     reload();
     api.fetchBooks().then(setBooks).catch(() => setBooks([]));
+    api.fetchParallels().then(setParallels).catch(() => setParallels([]));
   }, [reload]);
 
   // Initialise pane views once data is available: restore saved navigation
@@ -244,6 +247,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
           } else {
             byPair.set(key, {
               key,
+              kind: "wilson",
               from: rects.blocks.left[li.segmentId!],
               to: rects.blocks.right[ri.segmentId!],
               headwords: [li.headword],
@@ -255,8 +259,35 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
         }
       }
     }
+
+    // Claimed parallels (Atwill): endpoints are fixed segment pairs; draw in
+    // whichever orientation the panes currently hold the two documents.
+    // Presence in rects.blocks already implies near-visibility.
+    for (const p of parallels) {
+      if (!p.leftSegmentId || !p.rightSegmentId) continue;
+      const label = [p.title, `Atwill #${p.position} · ${p.verdict}`];
+      const pairs = [
+        { key: `par|${p.id}|lr`, a: p.leftSegmentId, aRef: p.leftRef, b: p.rightSegmentId, bRef: p.rightRef },
+        { key: `par|${p.id}|rl`, a: p.rightSegmentId, aRef: p.rightRef, b: p.leftSegmentId, bRef: p.leftRef },
+      ];
+      for (const { key, a, aRef, b, bRef } of pairs) {
+        const from = rects.blocks.left[a];
+        const to = rects.blocks.right[b];
+        if (!from || !to) continue;
+        byPair.set(key, {
+          key,
+          kind: "parallel",
+          from,
+          to,
+          headwords: label,
+          leftSegmentId: a,
+          leftRef: aRef,
+          rightRef: bRef,
+        });
+      }
+    }
     return [...byPair.values()].slice(0, MAX_ARCS);
-  }, [motifs, rects]);
+  }, [motifs, parallels, rects]);
 
   // Motif instances keyed by the verse segment they annotate, per side.
   const motifsBySegment = useMemo(() => {

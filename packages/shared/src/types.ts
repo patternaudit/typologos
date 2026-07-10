@@ -167,6 +167,30 @@ export interface MotifDetail {
   instances: MotifInstance[];
 }
 
+// ---- claimed parallels (imported sources, e.g. Atwill's Caesar's Messiah) ----
+
+export type ParallelVerdict = "supported" | "partial" | "unsupported" | "unchecked";
+
+export interface Parallel {
+  id: string;
+  source: string; // e.g. "atwill-cm"
+  title: string;
+  claim: string | null;
+  leftDocumentId: string; // NT side
+  leftSegmentId: string | null;
+  leftRef: string;
+  leftQuote: string | null;
+  rightDocumentId: string; // Josephus side
+  rightSegmentId: string | null;
+  rightRef: string;
+  rightQuote: string | null;
+  verification: string | null;
+  verdict: ParallelVerdict;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ---- API request payloads ----
 
 export interface CreateAnchorInput {

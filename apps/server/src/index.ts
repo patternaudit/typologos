@@ -16,6 +16,7 @@ import type {
   MotifDetail,
   MotifInstance,
   PaneSide,
+  Parallel,
   PassageMotifInstance,
   PassageWindow,
   Segment,
@@ -182,10 +183,13 @@ app.get("/api/documents/:id", (c) => {
   return c.json(toDocument(row));
 });
 
-// List imported corpus books (for the passage navigator), in canonical order.
+// List imported corpus books (for the passage navigator): the KJV in
+// canonical order, then other corpora (Josephus).
 app.get("/api/books", (c) => {
   const rows = db
-    .prepare("SELECT * FROM documents WHERE id LIKE 'kjv-%' ORDER BY rowid")
+    .prepare(
+      "SELECT * FROM documents WHERE id LIKE 'kjv-%' OR id LIKE 'jos-%' ORDER BY CASE WHEN id LIKE 'kjv-%' THEN 0 ELSE 1 END, rowid",
+    )
     .all() as Row[];
   const books: BookSummary[] = rows.map((r, i) => {
     const docId = r.id as string;
@@ -346,6 +350,31 @@ app.get("/api/motifs/:id", (c) => {
     instances: instanceRows.map(toMotifInstance),
   };
   return c.json(payload);
+});
+
+// All claimed passage parallels (e.g. Atwill's Flavian Signature sequence).
+app.get("/api/parallels", (c) => {
+  const rows = db.prepare("SELECT * FROM parallels ORDER BY source, position").all() as Row[];
+  const parallels: Parallel[] = rows.map((r) => ({
+    id: r.id as string,
+    source: r.source as string,
+    title: r.title as string,
+    claim: (r.claim as string) ?? null,
+    leftDocumentId: r.left_document_id as string,
+    leftSegmentId: (r.left_segment_id as string) ?? null,
+    leftRef: r.left_ref as string,
+    leftQuote: (r.left_quote as string) ?? null,
+    rightDocumentId: r.right_document_id as string,
+    rightSegmentId: (r.right_segment_id as string) ?? null,
+    rightRef: r.right_ref as string,
+    rightQuote: (r.right_quote as string) ?? null,
+    verification: (r.verification as string) ?? null,
+    verdict: (r.verdict as Parallel["verdict"]) ?? "unchecked",
+    position: Number(r.position),
+    createdAt: r.created_at as string,
+    updatedAt: r.updated_at as string,
+  }));
+  return c.json(parallels);
 });
 
 app.post("/api/anchors", async (c) => {

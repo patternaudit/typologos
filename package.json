@@ -12,6 +12,8 @@
     "db:seed": "npm run db:seed -w @typologos/server",
     "corpus:import": "npm run corpus:download -w @typologos/server && npm run corpus:import -w @typologos/server",
     "motifs:import": "npm run motifs:import -w @typologos/server",
+    "josephus:import": "npm run josephus:download -w @typologos/server && npm run josephus:import -w @typologos/server",
+    "atwill:import": "npm run atwill:import -w @typologos/server",
     "dev:server": "npm run dev -w @typologos/server",
     "dev:web": "npm run dev -w @typologos/web",
     "dev": "concurrently -n server,web -c blue,magenta \"npm run dev:server\" \"npm run dev:web\""

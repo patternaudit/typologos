@@ -1,13 +1,14 @@
 import { useState } from "react";
 import type { LocalRect } from "../hooks/useAnchorRects";
 
-// One arc between a left-pane verse and a right-pane verse that share one or
-// more Wilson motifs.
+// One arc between a left-pane verse and a right-pane verse. Wilson arcs come
+// from shared motifs; parallel arcs from imported claimed parallels (Atwill).
 export interface MotifArc {
   key: string; // leftSegId|rightSegId
+  kind: "wilson" | "parallel";
   from: LocalRect; // left verse block
   to: LocalRect; // right verse block
-  headwords: string[]; // shared motifs, deduped
+  headwords: string[]; // shared motifs (wilson) or "title — verdict" lines (parallel)
   leftSegmentId: string;
   leftRef: string; // e.g. "Exodus 3:2"
   rightRef: string;
@@ -57,10 +58,10 @@ export function MotifArcOverlay({ arcs, onArcClick }: MotifArcOverlayProps) {
               />
               <path
                 d={d}
-                className="motif-arc"
+                className={arc.kind === "parallel" ? "parallel-arc" : "motif-arc"}
                 strokeWidth={hovered ? width + 1 : width}
-                strokeDasharray="6 5"
-                opacity={hovered ? 0.95 : 0.4}
+                strokeDasharray={arc.kind === "parallel" ? "2 4" : "6 5"}
+                opacity={hovered ? 0.95 : arc.kind === "parallel" ? 0.55 : 0.4}
               />
             </g>
           );

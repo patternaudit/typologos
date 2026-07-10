@@ -279,6 +279,12 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   fill: none;
   transition: opacity 120ms ease, stroke-width 120ms ease;
 }
+/* Claimed parallels (e.g. Atwill): a cooler voice than Wilson's amber. */
+.parallel-arc {
+  stroke: #4a6b8a;
+  fill: none;
+  transition: opacity 120ms ease, stroke-width 120ms ease;
+}
 
 /* ---------- link builder (footer) ---------- */
 

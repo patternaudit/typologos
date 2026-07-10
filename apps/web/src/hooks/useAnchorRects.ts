@@ -15,10 +15,11 @@ export type AnchorRects = Record<string, LocalRect>;
 export interface WorkspaceRects {
   // [data-anchor-id] highlight spans (user anchors), by anchor id.
   anchors: AnchorRects;
-  // Annotated verse blocks (.block-text.has-motifs), by block key (segment
-  // id), per pane side.
+  // Near-visible verse blocks by block key (segment id), per pane side.
+  // Off-screen blocks are omitted, so presence in this map doubles as the
+  // visibility test for arc drawing.
   blocks: Record<PaneSide, AnchorRects>;
-  // Each pane's scroll viewport, for visibility culling.
+  // Each pane's scroll viewport.
   panes: Record<PaneSide, LocalRect | null>;
 }
 
@@ -64,19 +65,24 @@ export function useAnchorRects(
 
       const blocks: WorkspaceRects["blocks"] = { left: {}, right: {} };
       const panes: WorkspaceRects["panes"] = { left: null, right: null };
+      const MARGIN = 120;
       (["left", "right"] as PaneSide[]).forEach((side) => {
         const pane = container.querySelector<HTMLElement>(
           `.pane[data-side="${side}"] .pane-scroll`,
         );
         if (!pane) return;
-        panes[side] = local(pane.getBoundingClientRect());
+        const pbox = pane.getBoundingClientRect();
+        panes[side] = local(pbox);
         container
-          .querySelectorAll<HTMLElement>(
-            `.pane[data-side="${side}"] .block-text.has-motifs`,
-          )
+          .querySelectorAll<HTMLElement>(`.pane[data-side="${side}"] .block-text`)
           .forEach((el) => {
             const key = el.getAttribute("data-block-key");
-            if (key) blocks[side][key] = local(el.getBoundingClientRect());
+            if (!key) return;
+            const r = el.getBoundingClientRect();
+            // Keep only near-visible blocks: the map stays small and doubles
+            // as the visibility filter.
+            if (r.bottom < pbox.top - MARGIN || r.top > pbox.bottom + MARGIN) return;
+            blocks[side][key] = local(r);
           });
       });
 

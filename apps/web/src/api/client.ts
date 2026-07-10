@@ -7,6 +7,7 @@ import type {
   HydratedWorkspace,
   Link,
   MotifDetail,
+  Parallel,
   PassageMotifInstance,
   UpdateLinkInput,
 } from "@typologos/shared";
@@ -35,6 +36,10 @@ export function fetchBookMotifs(documentId: string): Promise<PassageMotifInstanc
   return fetch(`/api/books/${documentId}/motifs`).then((r) =>
     json<PassageMotifInstance[]>(r),
   );
+}
+
+export function fetchParallels(): Promise<Parallel[]> {
+  return fetch("/api/parallels").then((r) => json<Parallel[]>(r));
 }
 
 export function fetchMotifDetail(id: string): Promise<MotifDetail> {

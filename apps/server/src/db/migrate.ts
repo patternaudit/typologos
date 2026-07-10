@@ -85,6 +85,32 @@ CREATE INDEX IF NOT EXISTS idx_motif_instances_segment ON motif_instances (segme
 CREATE INDEX IF NOT EXISTS idx_motif_instances_doc_ch ON motif_instances (document_id, chapter, verse);
 CREATE INDEX IF NOT EXISTS idx_motif_instances_motif ON motif_instances (motif_id);
 
+-- Claimed passage-to-passage parallels from imported sources (e.g. Atwill's
+-- Caesar's Messiah). A separate provenance layer from both Wilson motifs and
+-- user-authored links.
+CREATE TABLE IF NOT EXISTS parallels (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,            -- e.g. 'atwill-cm'
+  title TEXT NOT NULL,             -- e.g. 'Fishing for men at the Sea of Galilee'
+  claim TEXT,                      -- the source's claim, briefly
+  left_document_id TEXT NOT NULL,  -- NT side
+  left_segment_id TEXT,
+  left_ref TEXT NOT NULL,          -- 'Luke 5:10'
+  left_quote TEXT,
+  right_document_id TEXT NOT NULL, -- Josephus side
+  right_segment_id TEXT,
+  right_ref TEXT NOT NULL,         -- 'Wars 3.10.9'
+  right_quote TEXT,
+  verification TEXT,               -- reviewer notes on the textual check
+  verdict TEXT,                    -- 'supported' | 'partial' | 'unsupported' | 'unchecked'
+  position INTEGER NOT NULL,       -- order within the source's sequence
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_parallels_left ON parallels (left_document_id);
+CREATE INDEX IF NOT EXISTS idx_parallels_right ON parallels (right_document_id);
+
 CREATE TABLE IF NOT EXISTS links (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL,
