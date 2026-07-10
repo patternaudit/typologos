@@ -21,10 +21,12 @@ persisted in SQLite.
 
 ```bash
 npm install
-npm run db:setup       # create tables + seed the Genesis 22 ↔ John 3 demo
-npm run corpus:import  # download + import the full KJV (OSIS -> documents + segments)
-npm run motifs:import  # parse Wilson's "A Dictionary of Bible Types" into motifs
-npm run dev            # server on :5179, web on :5173
+npm run db:setup        # create tables + seed the Genesis 22 ↔ John 3 demo
+npm run corpus:import   # download + import the full KJV (OSIS -> documents + segments)
+npm run motifs:import   # parse Wilson's "A Dictionary of Bible Types" into motifs
+npm run josephus:import # download + import Whiston's Wars of the Jews + Life
+npm run atwill:import   # load Atwill's Flavian Signature parallels (NT <-> Josephus)
+npm run dev             # server on :5179, web on :5173
 ```
 
 Open http://localhost:5173 — it boots into the seeded demo workspace. Use the
@@ -82,6 +84,31 @@ figures** drawer — headword, Wilson's grade chip (a/b/c), and his rationale.
 "Everywhere X appears" expands a motif into all of its passages; clicking one
 opens that passage in the *opposite* pane, scrolled to the verse.
 
+## Josephus corpus + claimed parallels (Atwill)
+
+`npm run josephus:import` brings in Whiston's *Wars of the Jews* (7 books,
+~690 sections) and *Life of Josephus* from Project Gutenberg as corpus
+documents — they appear in the pane navigator alongside the KJV, with
+Whiston sections as "verses".
+
+`npm run atwill:import` loads the 34-step "Flavian Signature" sequence from
+Joseph Atwill's *Caesar's Messiah* as a `parallels` layer: claimed
+typological pairs between NT passages (mostly Luke) and Josephus. Each row
+carries both quoted excerpts, a `verdict` and `verification` note from
+textual spot-checking (see `docs/night-2026-07-10/LOG.md`). Rendered as
+slate-blue dotted arcs between panes, distinct from Wilson's amber arcs and
+from user links.
+
+## Reading views
+
+Panes hold **whole books** in a continuous scroll; the chapter picker scrolls
+rather than reloads. Verses annotated by Wilson carry a dashed underline —
+hover for the motif brief, click for the Types & Figures drawer. When both
+panes show verses sharing a Wilson motif, a quiet amber arc connects them.
+
+Deep links: `?left=kjv-Gen:3:7&right=kjv-Rev:22:2` (book:chapter:verse) or
+`?left=doc:<id>` for legacy documents.
+
 ## How the flow works
 
 1. Select text in a pane → click **+ Anchor** in the top bar (one per side).
@@ -108,7 +135,10 @@ GET    /api/documents/:id
 GET    /api/books                       # imported corpus books (for the navigator)
 GET    /api/passages/:documentId/:chapter?startVerse=&endVerse=   # a passage window
 GET    /api/passages/:documentId/:chapter/motifs?startVerse=&endVerse=  # motif instances in a window
+GET    /api/books/:documentId/passage   # a whole book (continuous pane)
+GET    /api/books/:documentId/motifs    # all motif instances in a book
 GET    /api/motifs/:id                  # one motif + all its instances
+GET    /api/parallels                   # claimed parallels (Atwill layer)
 POST   /api/anchors                     # accepts optional segmentId
 POST   /api/links
 PATCH  /api/links/:id

@@ -64,6 +64,92 @@ frames. Fix: measurement falls back to a timeout and a slow 800ms poll with a
 change-fingerprint (no idle re-renders). The connector overlay was silently
 subject to the same bug since day one.
 
-## 3. Caesar's Messiah layer
+## 3. Caesar's Messiah layer — `0de35c7` + verification commit
 
-See section below (written as the work happened).
+![atwill fishing](05-atwill-fishing-for-men.png)
+
+The third layer is in, fully separate provenance (`atwill-cm`):
+
+- **Extraction.** Chapter 5 of the Flavian Signature edition parses cleanly
+  into the full **34-step sequence** — each step with its NT citation (Luke,
+  mostly), its Josephus citation, and both quoted excerpts
+  (`apps/server/src/corpus/atwill-parallels.json`). Two steps that Atwill
+  cross-references to other chapters (#32 cannibal Mary → ch. 3, #33 three
+  crucified → ch. 7) were patched in by hand from those chapters.
+- **Josephus corpus.** Whiston's *Wars of the Jews* (7 books, 687 sections)
+  and *Life* (76 sections) imported from Project Gutenberg as first-class
+  corpus documents — they appear in the pane navigator like any Bible book.
+  The Gutenberg text needed defect recovery (a missing CHAPTER heading in
+  Book IV, malformed section numbers, endnote blocks masquerading as
+  sections).
+- **Citation resolution.** Atwill cites (book, chapter, Niese ¶), but his
+  chapter numbers follow a different edition's chaptering than Whiston's.
+  Resolution matches his quoted excerpt against the actual section texts —
+  cited chapter first, whole book as fallback. **All 34 resolved, 0
+  low-confidence.**
+- **UI.** Parallel arcs render slate-blue dotted (vs. Wilson's amber dashes),
+  in either pane orientation; tooltips carry the step title and verdict.
+
+![atwill fruit tree](06-atwill-fruit-tree.png)
+![atwill mary](07-atwill-mary-passover.png)
+
+### Checking Atwill against Josephus (the part you asked for)
+
+I pulled the actual Whiston text for 15 of the 34 claims and compared. Scope
+of the check: does the cited passage exist, does it say what Atwill quotes,
+and do the two texts actually contain the claimed corresponding elements. I
+did **not** adjudicate his authorship thesis — only the textual claims.
+Verdicts live in the DB (`parallels.verdict` / `verification`) and surface in
+the arc tooltips.
+
+**Supported (10)** — the cited texts really contain the claimed elements:
+- **#1 Fishing for men**: Wars 3.10.9 *is* a slaughter on the Sea of Galilee
+  with men "caught by the vessels." Quote verbatim.
+- **#7–9 Gadara herd**: fugitives from **Gadara** driven violently by
+  Placidus's cavalry and drowned — "Jordan could not be passed over by
+  reason of the dead bodies" (Wars 4.7.4–6). Luke 8:33's herd runs violently
+  into the water and drowns, at Gadara.
+- **#10 Son of the living god**: Wars 4.10.7, Vespasian concludes Divine
+  Providence gave him the empire (verbatim), echoing Peter's confession
+  position in the sequence.
+- **#24 Fruit tree**: verbatim lexical overlap — Luke "cut it down" / Titus
+  "cut down all the fruit trees" before Jerusalem (Wars 5.3.2).
+- **#28 Stones**: the "THE SON COMETH" watchmen cry as the white siege stone
+  flies (Wars 5.6.3) is genuinely in Josephus.
+- **#29 Encircled**: Titus's circumvallation wall (Wars 5.12) vs Luke 19:43 —
+  also acknowledged by mainstream scholarship (usually as evidence Luke
+  post-dates the siege, not of Flavian authorship).
+- **#32 Cannibal Mary**: Wars 6.3.4 — a Mary, daughter of Eleazar, from the
+  "house of Hyssop," eats her roasted son during the siege famine. All
+  elements textually present.
+- **#33 Three crucified**: Life 75 [420-421] — Josephus (bar Matthias) has
+  three crucified acquaintances taken down; two die, one survives.
+
+**Partial (5)** — quotes faithful, but the correspondence leans on Atwill's
+satiric reading rather than shared imagery (#2 tribunal/forgiveness, #3
+Sabbath trick, #4 Ananus cast out, #5 John's wickedness-as-demon, #6
+Legion/Sicarii).
+
+**Unchecked (19)** — honest backlog; the pattern so far suggests most will
+land "supported" on quote fidelity with a mix on correspondence strength.
+
+### My read after a night with the data
+
+The *textual* phenomena Atwill points at are mostly real — same place names,
+same sequence spine (Galilee → road → outside walls → inside city), several
+verbatim images. What the tool now makes visible is exactly the thing worth
+studying: you can put Luke 13 next to Wars 5.3 and *see* the fruit tree cut
+down outside Jerusalem in both. Whether that's Flavian signature, Luke using
+Josephus as a source (the mainstream "Luke knew Josephus" hypothesis), or
+shared apocalyptic stock imagery — the side-by-side reading is now one click.
+
+## Morning menu
+
+- The 19 unchecked parallels (same method: read both sides, set verdict).
+- Parallels in the drawer (click a parallel arc → full claim + quotes +
+  verification note, like the Wilson drawer).
+- The minimap (density strip per pane; the arcs want an overview scale).
+- Multi-verse ranges (Atwill's NT citations are ranges; arcs currently anchor
+  the first verse).
+- `npm run josephus:import && npm run atwill:import` are idempotent and in
+  the README.

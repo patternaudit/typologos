@@ -62,24 +62,15 @@ function tokens(text: string): string[] {
   ];
 }
 
-// Resolve a Wars citation to the Whiston section in the cited chapter whose
-// text best contains Atwill's quote.
-function resolveWarSection(
-  book: number,
-  chapter: number,
-  quote: string,
-): { segmentId: string; section: number; score: number } | null {
-  const rows = db
-    .prepare(
-      "SELECT id, verse, body FROM segments WHERE document_id = ? AND kind = 'verse' AND chapter = ? ORDER BY verse",
-    )
-    .all(`jos-War-${book}`, chapter) as { id: string; verse: number; body: string }[];
+// Resolve a Wars citation to the Whiston section whose text best contains
+// Atwill's quote. His book/Niese numbers are reliable but his chapter numbers
+// follow a different edition's chaptering, so we try the cited chapter first
+// and fall back to searching the whole book when the match is poor.
+function scoreRows(
+  rows: { id: string; chapter?: number; verse: number; body: string }[],
+  qt: string[],
+): { segmentId: string; section: number; chapter?: number; score: number } | null {
   if (rows.length === 0) return null;
-  const qt = tokens(quote);
-  if (qt.length === 0) {
-    // No quote to match: fall back to the chapter's first section.
-    return { segmentId: rows[0].id, section: rows[0].verse, score: 0 };
-  }
   let best = rows[0];
   let bestScore = -1;
   for (const row of rows) {
@@ -91,7 +82,38 @@ function resolveWarSection(
       best = row;
     }
   }
-  return { segmentId: best.id, section: best.verse, score: bestScore };
+  return { segmentId: best.id, section: best.verse, chapter: best.chapter, score: bestScore };
+}
+
+function resolveWarSection(
+  book: number,
+  chapter: number,
+  quote: string,
+): { segmentId: string; section: number; chapter: number; score: number } | null {
+  const inChapter = db
+    .prepare(
+      "SELECT id, chapter, verse, body FROM segments WHERE document_id = ? AND kind = 'verse' AND chapter = ? ORDER BY verse",
+    )
+    .all(`jos-War-${book}`, chapter) as { id: string; chapter: number; verse: number; body: string }[];
+  const qt = tokens(quote);
+  if (qt.length === 0) {
+    const first = inChapter[0];
+    return first ? { segmentId: first.id, section: first.verse, chapter, score: 0 } : null;
+  }
+  const chapterBest = scoreRows(inChapter, qt);
+  if (chapterBest && chapterBest.score >= 0.6) {
+    return { ...chapterBest, chapter } as ReturnType<typeof resolveWarSection>;
+  }
+  const inBook = db
+    .prepare(
+      "SELECT id, chapter, verse, body FROM segments WHERE document_id = ? AND kind = 'verse' ORDER BY chapter, verse",
+    )
+    .all(`jos-War-${book}`) as { id: string; chapter: number; verse: number; body: string }[];
+  const bookBest = scoreRows(inBook, qt);
+  const winner = (bookBest?.score ?? -1) > (chapterBest?.score ?? -1) ? bookBest : chapterBest;
+  return winner
+    ? { segmentId: winner.segmentId, section: winner.section, chapter: winner.chapter ?? chapter, score: winner.score }
+    : null;
 }
 
 function run() {
@@ -142,12 +164,12 @@ function run() {
         const resolved = resolveWarSection(jos.book!, jos.chapter!, jos.quote ?? "");
         rightSeg = resolved?.segmentId ?? null;
         rightRef = resolved
-          ? `Wars ${jos.book}.${jos.chapter}.${resolved.section}`
+          ? `Wars ${jos.book}.${resolved.chapter}.${resolved.section}`
           : `Wars ${jos.book}.${jos.chapter}`;
         resolutionNote =
           `cited Wars ${jos.book},${jos.chapter} [Niese ${jos.niese}]; ` +
           (resolved
-            ? `quote-matched to Whiston §${resolved.section} (score ${resolved.score.toFixed(2)})`
+            ? `quote-matched to Whiston ${resolved.chapter}.${resolved.section} (score ${resolved.score.toFixed(2)})`
             : "chapter has no sections?");
         if (!resolved || resolved.score < 0.5) lowConfidence++;
       }
