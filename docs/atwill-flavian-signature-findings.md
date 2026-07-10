@@ -14,10 +14,12 @@ at home in the mainstream hypothesis that Luke's author knew Josephus's
 writings — the point of the tool is to let you weigh those readings with both
 texts open.
 
-**Tally: 17 supported · 17 partial · 0 unsupported.** No cited passage was
+**Tally: 18 supported · 16 partial · 0 unsupported.** No cited passage was
 missing or misquoted; Atwill's citations are faithful throughout. "Partial"
 means the correspondence is carried substantially by his satiric
-interpretation rather than by shared text.
+interpretation rather than by shared text. (#3 was upgraded from partial
+after the maintainer located the "right hands" offer in Wars 4.2.2 — see the
+correction note there and `docs/known-issues.md` for the method lesson.)
 
 **Sequence note.** The much-repeated claim that the parallels occur *in the
 same order* in Luke and in Josephus's campaign narrative holds broadly for
@@ -47,14 +49,21 @@ grants them leave to depart by one road — into a trap. The judge-who-can-
 pardon scene is really there and immediately follows #1, but "rise and walk"
 ↔ "walk to your captivity" is Atwill's satiric reading, not shared text.
 
-### 3. Keep holy the Sabbath / the "right hand" — **PARTIAL**
-Luke 6:1–11 ↔ Wars 4.2.3 · [open](http://localhost:3001/?left=kjv-Luke:6:1&right=jos-War-4:2:3&parallel=par-atwill-3)
+### 3. Keep holy the Sabbath / the "right hand" — **SUPPORTED** *(upgraded)*
+Luke 6:1–11 ↔ Wars 4.2.2–3 · [open](http://localhost:3001/?left=kjv-Luke:6:1&right=jos-War-4:2:3&parallel=par-atwill-3)
 
-Luke's Sabbath controversies and the withered right hand restored. Josephus:
-John of Gischala tricks Titus by pleading the Sabbath ("not so much out of
+Luke 6 pairs two Sabbath scenes: grain-plucking, then the restoration of the
+withered **right hand**. Wars 4.2.2–3 pairs the same two elements in
+adjacent sections: Titus stands before the wall of Gischala offering the
+security of the Romans' **right hands** — the pledge idiom recurs three
+times in one speech ("intrusted themselves to the security of the Romans'
+right hands… humane offers, and right hands for security") — and in the very
+next section John of Gischala pleads **the Sabbath** ("not so much out of
 regard to the seventh day as to his own preservation") and escapes by night.
-The Sabbath-as-cover element is verbatim; the "right hand" half of the claim
-I could not locate in the cited section.
+Right-hand restoration/offer + Sabbath, adjacent, in both texts. *Initially
+graded partial because my section-scoped read of 4.2.3 missed the right-hands
+speech one section earlier; the maintainer caught it in 4.2.2 — scroll up one section
+in the right pane to see it in context.*
 
 ### 4. Cast out the supporters of the Son of Man — **PARTIAL**
 Luke 6:22 ↔ Wars 4.5.2 · [open](http://localhost:3001/?left=kjv-Luke:6:22&right=jos-War-4:5:2&parallel=par-atwill-4)
