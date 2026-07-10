@@ -196,6 +196,28 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 .doc-block { display: block; }
 .doc-block .block-text { white-space: pre-wrap; }
 .verse-block { display: inline; }
+.chapter-heading {
+  display: block;
+  margin: 26px 0 10px;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.chapter-heading::before {
+  content: "Chapter ";
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+  vertical-align: 6px;
+  margin-right: 6px;
+}
+.block:first-child + .chapter-heading,
+.pane-body > .chapter-heading:first-child { margin-top: 0; }
+
 .verse-num {
   font-size: 10px;
   font-weight: 700;

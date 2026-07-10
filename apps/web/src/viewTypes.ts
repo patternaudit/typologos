@@ -1,16 +1,10 @@
 import type { Anchor } from "@typologos/shared";
 
 // What a pane is currently showing: either a legacy standalone document, or a
-// windowed corpus passage (one chapter, optionally narrowed to a verse range).
+// whole corpus book in a continuously scrolling pane.
 export type PaneView =
   | { mode: "document"; documentId: string }
-  | {
-      mode: "passage";
-      bookId: string;
-      chapter: number;
-      startVerse: number | null;
-      endVerse: number | null;
-    };
+  | { mode: "book"; bookId: string };
 
 // One measured text region rendered in a pane.
 export interface Block {
@@ -19,6 +13,7 @@ export interface Block {
   documentId: string; // anchor target document (book id, or legacy doc id)
   passageRef: string; // e.g. "John 3:16" or "Genesis 22:1–19"
   verseLabel?: string; // small leading verse number, for corpus verses
+  chapterStart?: number; // set on a chapter's first verse: render a heading
   body: string;
   anchors: Anchor[]; // anchors whose offsets are into THIS block's body
 }

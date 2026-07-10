@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { BookSummary } from "@typologos/shared";
 import type { PaneView } from "../viewTypes";
 
@@ -5,35 +6,30 @@ interface NavigatorProps {
   books: BookSummary[];
   view: PaneView;
   onNavigate: (view: PaneView) => void;
+  // Book mode is a continuous scroll: picking a chapter scrolls, not reloads.
+  onScrollToChapter: (chapter: number) => void;
 }
 
-// Compact per-pane corpus navigator: pick a book + chapter, optionally narrow to
-// a verse range. This is the "large-corpus navigation" surface.
-export function Navigator({ books, view, onNavigate }: NavigatorProps) {
-  const bookId = view.mode === "passage" ? view.bookId : "";
+// Compact per-pane corpus navigator: pick a book to load it whole; pick a
+// chapter to scroll to it.
+export function Navigator({ books, view, onNavigate, onScrollToChapter }: NavigatorProps) {
+  const bookId = view.mode === "book" ? view.bookId : "";
   const book = books.find((b) => b.id === bookId) ?? null;
-  const chapter = view.mode === "passage" ? view.chapter : 1;
-  const startVerse = view.mode === "passage" ? view.startVerse : null;
-  const endVerse = view.mode === "passage" ? view.endVerse : null;
-
   const chapterCount = book?.chapterCount ?? 0;
+
+  // Local chapter selection: purely a scroll control, reset on book change.
+  const [chapter, setChapter] = useState(1);
+  useEffect(() => {
+    setChapter(1);
+  }, [bookId]);
 
   const goBook = (id: string) => {
     if (!id) return;
-    onNavigate({ mode: "passage", bookId: id, chapter: 1, startVerse: null, endVerse: null });
+    onNavigate({ mode: "book", bookId: id });
   };
   const goChapter = (ch: number) => {
-    if (view.mode !== "passage") return;
-    onNavigate({ ...view, chapter: ch, startVerse: null, endVerse: null });
-  };
-  const setRange = (start: number | null, end: number | null) => {
-    if (view.mode !== "passage") return;
-    onNavigate({ ...view, startVerse: start, endVerse: end });
-  };
-
-  const parseVerse = (raw: string): number | null => {
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) && n > 0 ? n : null;
+    setChapter(ch);
+    onScrollToChapter(ch);
   };
 
   return (
@@ -55,40 +51,20 @@ export function Navigator({ books, view, onNavigate }: NavigatorProps) {
         ))}
       </select>
 
-      {view.mode === "passage" && (
-        <>
-          <select
-            className="nav-chapter"
-            value={chapter}
-            onChange={(e) => goChapter(Number(e.target.value))}
-          >
-            {Array.from({ length: chapterCount }, (_, i) => i + 1).map((ch) => (
-              <option key={ch} value={ch}>
-                ch {ch}
-              </option>
-            ))}
-          </select>
-          <span className="nav-range">
-            v
-            <input
-              type="number"
-              min={1}
-              placeholder="1"
-              value={startVerse ?? ""}
-              onChange={(e) => setRange(parseVerse(e.target.value), endVerse)}
-            />
-            –
-            <input
-              type="number"
-              min={1}
-              placeholder="end"
-              value={endVerse ?? ""}
-              onChange={(e) => setRange(startVerse, parseVerse(e.target.value))}
-            />
-          </span>
-        </>
+      {view.mode === "book" && chapterCount > 1 && (
+        <select
+          className="nav-chapter"
+          value={chapter}
+          onChange={(e) => goChapter(Number(e.target.value))}
+          title="Scroll to chapter"
+        >
+          {Array.from({ length: chapterCount }, (_, i) => i + 1).map((ch) => (
+            <option key={ch} value={ch}>
+              ch {ch}
+            </option>
+          ))}
+        </select>
       )}
-
     </div>
   );
 }

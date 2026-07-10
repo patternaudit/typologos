@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Anchor,
+  BookPassage,
   BookSummary,
   HydratedWorkspace,
   PaneSide,
   PassageMotifInstance,
-  PassageWindow,
   RelationshipType,
 } from "@typologos/shared";
 import * as api from "../api/client";
@@ -22,8 +22,22 @@ interface WorkspaceProps {
 }
 
 type SideViews = { left: PaneView | null; right: PaneView | null };
-type SidePassages = { left: PassageWindow | null; right: PassageWindow | null };
+type SideBooks = { left: BookPassage | null; right: BookPassage | null };
 type SideMotifs = { left: PassageMotifInstance[]; right: PassageMotifInstance[] };
+
+// Older saved views used a per-chapter "passage" mode; fold those into the
+// scrolling book mode.
+function normalizeView(raw: unknown): PaneView | null {
+  if (!raw || typeof raw !== "object") return null;
+  const v = raw as Record<string, unknown>;
+  if (v.mode === "document" && typeof v.documentId === "string") {
+    return { mode: "document", documentId: v.documentId };
+  }
+  if ((v.mode === "book" || v.mode === "passage") && typeof v.bookId === "string") {
+    return { mode: "book", bookId: v.bookId };
+  }
+  return null;
+}
 
 // Which verse's motif drawer is open, and in which pane it was opened.
 interface MotifPanelState {
@@ -36,7 +50,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [data, setData] = useState<HydratedWorkspace | null>(null);
   const [books, setBooks] = useState<BookSummary[]>([]);
   const [views, setViews] = useState<SideViews>({ left: null, right: null });
-  const [passages, setPassages] = useState<SidePassages>({ left: null, right: null });
+  const [sideBooks, setSideBooks] = useState<SideBooks>({ left: null, right: null });
   const [motifs, setMotifs] = useState<SideMotifs>({ left: [], right: [] });
   const [motifPanel, setMotifPanel] = useState<MotifPanelState | null>(null);
   // Verse block to scroll into view once its pane has rendered (segment id).
@@ -74,29 +88,43 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     api.fetchBooks().then(setBooks).catch(() => setBooks([]));
   }, [reload]);
 
-  // Initialise pane views once data is available: restore saved navigation, or
-  // default both panes to their seeded documents.
+  // Initialise pane views once data is available: restore saved navigation
+  // (normalizing older formats), or default both panes to their seeded
+  // documents.
   useEffect(() => {
     if (!data || (views.left && views.right)) return;
     const leftPane = data.panes.find((p) => p.side === "left");
     const rightPane = data.panes.find((p) => p.side === "right");
     if (!leftPane || !rightPane) return;
 
-    let saved: SideViews | null = null;
+    let savedLeft: PaneView | null = null;
+    let savedRight: PaneView | null = null;
     try {
       const raw = localStorage.getItem(viewsKey);
-      if (raw) saved = JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        savedLeft = normalizeView(parsed.left);
+        savedRight = normalizeView(parsed.right);
+      }
     } catch {
-      saved = null;
+      /* fall through to defaults */
     }
-    setViews(
-      saved?.left && saved?.right
-        ? saved
-        : {
-            left: { mode: "document", documentId: leftPane.document.id },
-            right: { mode: "document", documentId: rightPane.document.id },
-          },
-    );
+    // Deep links win over saved state: ?left=kjv-Exod&right=kjv-Rev (a book
+    // document id) or ?left=doc:<documentId> for legacy standalone documents.
+    const params = new URLSearchParams(window.location.search);
+    const fromParam = (raw: string | null): PaneView | null => {
+      if (!raw) return null;
+      if (raw.startsWith("doc:")) return { mode: "document", documentId: raw.slice(4) };
+      return { mode: "book", bookId: raw };
+    };
+    setViews({
+      left:
+        fromParam(params.get("left")) ??
+        savedLeft ?? { mode: "document", documentId: leftPane.document.id },
+      right:
+        fromParam(params.get("right")) ??
+        savedRight ?? { mode: "document", documentId: rightPane.document.id },
+    });
   }, [data, views, viewsKey]);
 
   // Persist navigation.
@@ -112,20 +140,18 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
   const fetchSide = useCallback(
     async (side: PaneSide, view: PaneView | null) => {
-      if (!view || view.mode !== "passage") {
-        setPassages((p) => ({ ...p, [side]: null }));
+      if (!view || view.mode !== "book") {
+        setSideBooks((p) => ({ ...p, [side]: null }));
         setMotifs((m) => ({ ...m, [side]: [] }));
         return;
       }
       try {
-        const [pw, mi] = await Promise.all([
-          api.fetchPassage(view.bookId, view.chapter, view.startVerse, view.endVerse),
+        const [bp, mi] = await Promise.all([
+          api.fetchBookPassage(view.bookId),
           // Motifs are decoration: a failure shouldn't block the passage.
-          api
-            .fetchPassageMotifs(view.bookId, view.chapter, view.startVerse, view.endVerse)
-            .catch(() => [] as PassageMotifInstance[]),
+          api.fetchBookMotifs(view.bookId).catch(() => [] as PassageMotifInstance[]),
         ]);
-        setPassages((p) => ({ ...p, [side]: pw }));
+        setSideBooks((p) => ({ ...p, [side]: bp }));
         setMotifs((m) => ({ ...m, [side]: mi }));
         bumpLayout();
       } catch (e) {
@@ -145,16 +171,16 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
   const rects = useAnchorRects(mainRef, version);
 
-  // Merge every anchor we know about (link endpoints + loaded passages) so draft
+  // Merge every anchor we know about (link endpoints + loaded books) so draft
   // slots, the inspector, and highlights all resolve by id.
   const anchorsById = useMemo(() => {
     const byId = new Map<string, Anchor>();
     for (const a of data?.linkAnchors ?? []) byId.set(a.id, a);
     for (const pane of data?.panes ?? []) for (const a of pane.anchors) byId.set(a.id, a);
-    for (const a of passages.left?.anchors ?? []) byId.set(a.id, a);
-    for (const a of passages.right?.anchors ?? []) byId.set(a.id, a);
+    for (const a of sideBooks.left?.anchors ?? []) byId.set(a.id, a);
+    for (const a of sideBooks.right?.anchors ?? []) byId.set(a.id, a);
     return byId;
-  }, [data, passages]);
+  }, [data, sideBooks]);
 
   const linkedAnchorIds = useMemo(() => {
     const set = new Set<string>();
@@ -211,41 +237,38 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
         };
       }
 
-      const pw = passages[side];
-      // Still loading (or stale for a different chapter).
-      if (!pw || pw.document.id !== view.bookId || pw.chapter !== view.chapter) return null;
+      const bp = sideBooks[side];
+      // Still loading (or stale for a different book).
+      if (!bp || bp.document.id !== view.bookId) return null;
 
       const anchorsBySeg = new Map<string, Anchor[]>();
-      for (const a of pw.anchors) {
+      for (const a of bp.anchors) {
         if (!a.segmentId) continue;
         const list = anchorsBySeg.get(a.segmentId) ?? [];
         list.push(a);
         anchorsBySeg.set(a.segmentId, list);
       }
 
-      const blocks = pw.verses.map((v) => ({
-        key: v.id,
-        segmentId: v.id,
-        documentId: view.bookId,
-        passageRef: v.ref,
-        verseLabel: v.verse != null ? String(v.verse) : undefined,
-        body: v.body,
-        anchors: anchorsBySeg.get(v.id) ?? [],
-      }));
+      let lastChapter = -1;
+      const blocks = bp.verses.map((v) => {
+        const chapterStart = v.chapter !== lastChapter ? v.chapter : undefined;
+        lastChapter = v.chapter;
+        return {
+          key: v.id,
+          segmentId: v.id,
+          documentId: view.bookId,
+          passageRef: v.ref,
+          verseLabel: v.verse != null ? String(v.verse) : undefined,
+          chapterStart,
+          body: v.body,
+          anchors: anchorsBySeg.get(v.id) ?? [],
+        };
+      });
 
-      const name = pw.document.title;
-      const first = pw.verses[0]?.verse ?? null;
-      const last = pw.verses[pw.verses.length - 1]?.verse ?? null;
-      let reference = `${name} ${view.chapter}`;
-      if ((view.startVerse != null || view.endVerse != null) && first != null && last != null) {
-        reference =
-          first === last
-            ? `${name} ${view.chapter}:${first}`
-            : `${name} ${view.chapter}:${first}–${last}`;
-      }
-      return { title: name, reference, blocks };
+      const name = bp.document.title;
+      return { title: name, reference: bp.document.reference, blocks };
     },
-    [data, passages],
+    [data, sideBooks],
   );
 
   const leftData = paneData("left", views.left);
@@ -267,7 +290,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const refreshSide = useCallback(
     (side: PaneSide) => {
       const view = side === "left" ? views.left : views.right;
-      if (view?.mode === "passage") return fetchSide(side, view);
+      if (view?.mode === "book") return fetchSide(side, view);
       return reload();
     },
     [views, fetchSide, reload],
@@ -347,21 +370,19 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   }, []);
 
   // From the drawer, open a referenced passage in the opposite pane and land
-  // on the verse (segment ids are deterministic: seg-<doc>-<ch>-<v>).
+  // on the verse (segment ids are deterministic: seg-<doc>-<ch>-<v>). If that
+  // pane already shows the book, just scroll — no refetch.
   const navigateOppositePane = useCallback(
     (documentId: string, chapter: number, verse: number) => {
       if (!motifPanel) return;
       const other: PaneSide = motifPanel.side === "left" ? "right" : "left";
-      navigate(other, {
-        mode: "passage",
-        bookId: documentId,
-        chapter,
-        startVerse: null,
-        endVerse: null,
-      });
+      const otherView = other === "left" ? views.left : views.right;
+      if (!(otherView?.mode === "book" && otherView.bookId === documentId)) {
+        navigate(other, { mode: "book", bookId: documentId });
+      }
       setScrollTargets((t) => ({ ...t, [other]: `seg-${documentId}-${chapter}-${verse}` }));
     },
-    [motifPanel, navigate],
+    [motifPanel, views, navigate],
   );
 
   const consumeScrollTarget = useCallback((side: PaneSide) => {

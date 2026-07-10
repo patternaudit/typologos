@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { db } from "./db/client.js";
 import type {
   Anchor,
+  BookPassage,
   BookSummary,
   CreateAnchorInput,
   CreateLinkInput,
@@ -254,6 +255,48 @@ app.get("/api/passages/:documentId/:chapter", (c) => {
     anchors,
   };
   return c.json(payload);
+});
+
+// A whole book for the continuously scrolling pane: all verse segments in
+// canonical order, plus every segment-anchored anchor in the book.
+app.get("/api/books/:documentId/passage", (c) => {
+  const documentId = c.req.param("documentId");
+  const docRow = db.prepare("SELECT * FROM documents WHERE id = ?").get(documentId) as
+    | Row
+    | undefined;
+  if (!docRow) return c.json({ error: "document not found" }, 404);
+
+  const verseRows = db
+    .prepare("SELECT * FROM segments WHERE document_id = ? AND kind = 'verse' ORDER BY position")
+    .all(documentId) as Row[];
+  const anchorRows = db
+    .prepare("SELECT * FROM anchors WHERE document_id = ? AND segment_id IS NOT NULL")
+    .all(documentId) as Row[];
+
+  const payload: BookPassage = {
+    document: toDocument(docRow),
+    verses: verseRows.map(toSegment),
+    anchors: anchorRows.map(toAnchor),
+  };
+  return c.json(payload);
+});
+
+// Every motif instance in a book, for the scrolling pane's annotations.
+app.get("/api/books/:documentId/motifs", (c) => {
+  const documentId = c.req.param("documentId");
+  const rows = db
+    .prepare(
+      `SELECT mi.*, m.headword FROM motif_instances mi
+       JOIN motifs m ON m.id = mi.motif_id
+       WHERE mi.document_id = ?
+       ORDER BY mi.chapter, mi.verse, m.headword`,
+    )
+    .all(documentId) as Row[];
+  const instances: PassageMotifInstance[] = rows.map((r) => ({
+    ...toMotifInstance(r),
+    headword: r.headword as string,
+  }));
+  return c.json(instances);
 });
 
 // Motif instances (imported typology reference data) touching a passage

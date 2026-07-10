@@ -118,6 +118,14 @@ export interface PassageWindow {
   anchors: Anchor[]; // anchors targeting those segments
 }
 
+// A whole book, for continuously scrolling panes: every verse segment in
+// order plus all segment-anchored anchors in the book.
+export interface BookPassage {
+  document: Document;
+  verses: Segment[];
+  anchors: Anchor[];
+}
+
 // ---- motifs (imported typology reference data, e.g. Wilson's dictionary) ----
 
 // Wilson's own confidence grading: (a) pure types identified as such by

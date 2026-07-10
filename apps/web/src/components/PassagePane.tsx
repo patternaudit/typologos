@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { Anchor, BookSummary, PassageMotifInstance } from "@typologos/shared";
 import { getSelectionOffsets } from "../hooks/useTextSelection";
 import type { Block, PaneData, PaneView, PendingSelection } from "../viewTypes";
@@ -75,7 +75,7 @@ export function PassagePane({
     if (!scrollTargetKey || !rootRef.current) return;
     const el = rootRef.current.querySelector(`[data-block-key="${scrollTargetKey}"]`);
     if (!(el instanceof HTMLElement)) return; // not rendered yet; retry next render
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollIntoViewSensibly(el, "center");
     el.classList.add("verse-flash");
     const timer = setTimeout(() => el.classList.remove("verse-flash"), 2400);
     onScrollTargetDone();
@@ -105,11 +105,29 @@ export function PassagePane({
     });
   };
 
+  // Smooth-scroll short hops; jump instantly across long distances (a smooth
+  // 35,000px animation takes seconds and paints blank frames).
+  const scrollIntoViewSensibly = (el: Element, block: ScrollLogicalPosition) => {
+    const scroller = el.closest(".pane-scroll");
+    const distance =
+      scroller instanceof HTMLElement
+        ? Math.abs(
+            el.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
+          )
+        : 0;
+    el.scrollIntoView({ behavior: distance > 2500 ? "auto" : "smooth", block });
+  };
+
+  const scrollToChapter = (chapter: number) => {
+    const el = rootRef.current?.querySelector(`[data-chapter-heading="${chapter}"]`);
+    if (el) scrollIntoViewSensibly(el, "start");
+  };
+
   const renderBlock = (block: Block) => {
     const segments = buildSegments(block.body, block.anchors);
     const blockMotifs = block.segmentId ? motifsBySegment.get(block.segmentId) ?? [] : [];
     const annotated = blockMotifs.length > 0;
-    return (
+    const verseBlock = (
       <div className={`block ${block.verseLabel ? "verse-block" : "doc-block"}`} key={block.key}>
         {block.verseLabel && <sup className="verse-num">{block.verseLabel}</sup>}
         <span
@@ -167,6 +185,17 @@ export function PassagePane({
         </span>{" "}
       </div>
     );
+    if (block.chapterStart == null) return verseBlock;
+    // First verse of a chapter: break the inline flow with a chapter heading
+    // (also the scroll target for the navigator's chapter picker).
+    return (
+      <Fragment key={`ch-${block.key}`}>
+        <div className="chapter-heading" data-chapter-heading={block.chapterStart}>
+          {block.chapterStart}
+        </div>
+        {verseBlock}
+      </Fragment>
+    );
   };
 
   return (
@@ -176,7 +205,12 @@ export function PassagePane({
           <div className="pane-title">{data.title}</div>
           <div className="pane-reference">{data.reference}</div>
         </div>
-        <Navigator books={books} view={view} onNavigate={onNavigate} />
+        <Navigator
+          books={books}
+          view={view}
+          onNavigate={onNavigate}
+          onScrollToChapter={scrollToChapter}
+        />
       </div>
       <div className="pane-scroll">
         <div className="pane-body" ref={rootRef} onMouseUp={handleMouseUp}>

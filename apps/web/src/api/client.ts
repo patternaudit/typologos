@@ -1,5 +1,6 @@
 import type {
   Anchor,
+  BookPassage,
   BookSummary,
   CreateAnchorInput,
   CreateLinkInput,
@@ -7,7 +8,6 @@ import type {
   Link,
   MotifDetail,
   PassageMotifInstance,
-  PassageWindow,
   UpdateLinkInput,
 } from "@typologos/shared";
 
@@ -27,32 +27,12 @@ export function fetchBooks(): Promise<BookSummary[]> {
   return fetch("/api/books").then((r) => json<BookSummary[]>(r));
 }
 
-export function fetchPassage(
-  documentId: string,
-  chapter: number,
-  startVerse?: number | null,
-  endVerse?: number | null,
-): Promise<PassageWindow> {
-  const params = new URLSearchParams();
-  if (startVerse != null) params.set("startVerse", String(startVerse));
-  if (endVerse != null) params.set("endVerse", String(endVerse));
-  const qs = params.toString();
-  return fetch(`/api/passages/${documentId}/${chapter}${qs ? `?${qs}` : ""}`).then((r) =>
-    json<PassageWindow>(r),
-  );
+export function fetchBookPassage(documentId: string): Promise<BookPassage> {
+  return fetch(`/api/books/${documentId}/passage`).then((r) => json<BookPassage>(r));
 }
 
-export function fetchPassageMotifs(
-  documentId: string,
-  chapter: number,
-  startVerse?: number | null,
-  endVerse?: number | null,
-): Promise<PassageMotifInstance[]> {
-  const params = new URLSearchParams();
-  if (startVerse != null) params.set("startVerse", String(startVerse));
-  if (endVerse != null) params.set("endVerse", String(endVerse));
-  const qs = params.toString();
-  return fetch(`/api/passages/${documentId}/${chapter}/motifs${qs ? `?${qs}` : ""}`).then((r) =>
+export function fetchBookMotifs(documentId: string): Promise<PassageMotifInstance[]> {
+  return fetch(`/api/books/${documentId}/motifs`).then((r) =>
     json<PassageMotifInstance[]>(r),
   );
 }
