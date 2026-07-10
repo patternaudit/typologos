@@ -95,14 +95,19 @@ The third layer is in, fully separate provenance (`atwill-cm`):
 
 ### Checking Atwill against Josephus (the part you asked for)
 
-I pulled the actual Whiston text for 15 of the 34 claims and compared. Scope
-of the check: does the cited passage exist, does it say what Atwill quotes,
-and do the two texts actually contain the claimed corresponding elements. I
-did **not** adjudicate his authorship thesis — only the textual claims.
-Verdicts live in the DB (`parallels.verdict` / `verification`) and surface in
-the arc tooltips.
+I pulled the actual Whiston text for **all 34 claims** and compared. Scope of
+the check: does the cited passage exist, does it say what Atwill quotes, and
+do the two texts actually contain the claimed corresponding elements. I did
+**not** adjudicate his authorship thesis — only the textual claims. Verdicts
+live in the DB (`parallels.verdict` / `verification`) and surface in the arc
+tooltips.
 
-**Supported (10)** — the cited texts really contain the claimed elements:
+**Final tally: 17 supported · 17 partial · 0 unsupported.** Not one cited
+passage was missing or misquoted — Atwill's citations are faithful. The
+supported/partial split is entirely about how much of the correspondence
+lives in the texts versus in his satiric reading.
+
+**Supported highlights** — the cited texts really contain the claimed elements:
 - **#1 Fishing for men**: Wars 3.10.9 *is* a slaughter on the Sea of Galilee
   with men "caught by the vessels." Quote verbatim.
 - **#7–9 Gadara herd**: fugitives from **Gadara** driven violently by
@@ -125,13 +130,20 @@ the arc tooltips.
 - **#33 Three crucified**: Life 75 [420-421] — Josephus (bar Matthias) has
   three crucified acquaintances taken down; two die, one survives.
 
-**Partial (5)** — quotes faithful, but the correspondence leans on Atwill's
-satiric reading rather than shared imagery (#2 tribunal/forgiveness, #3
-Sabbath trick, #4 Ananus cast out, #5 John's wickedness-as-demon, #6
-Legion/Sicarii).
+Later finds in the same class: **#13** (messengers sent ahead to Jerusalem),
+**#17** (house divided → desolation), **#18** (armed men overcome by a
+stronger), **#21** (**Jesus ben Ananias**, the woe-crying Jesus killed by a
+siege stone — also a mainstream passion-narrative comparandum), **#23**
+(three factions "reduced to two" vs Luke's "three against two" — the numbers
+are in both texts), **#27** (emissary sent for terms of peace), **#31**
+(cessation of the Daily Sacrifice = Daniel's abomination motif).
 
-**Unchecked (19)** — honest backlog; the pattern so far suggests most will
-land "supported" on quote fidelity with a mix on correspondence strength.
+**Partial (17)** — quotes faithful, but the correspondence leans on Atwill's
+satiric reading rather than shared text (e.g. #2 tribunal/forgiveness, #5
+John's wickedness-as-"demon", #15 Titus through Samaria as the Samaritan,
+#16 the legion arriving at night as the midnight knock). #34's endpoints
+need refining (row currently points at the Nazareth-brow decode; the
+Simon/John core is Wars 7.5.6).
 
 ### My read after a night with the data
 
