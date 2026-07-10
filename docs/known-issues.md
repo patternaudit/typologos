@@ -27,12 +27,16 @@ one section before the cited Sabbath section: Titus's speech offers the
 security of the Romans' "right hands" three times. Upgraded to *supported*.
 **Lesson.** Verification read sections in isolation; several of Atwill's
 claims span a section boundary (his citations mark where a *quote* sits, not
-where the argument's elements sit). Any future re-verification pass should
-read ±1 section around each citation. Candidates worth re-reading with that
-wider window: **#25** (narrow gate/shut door — graded partial specifically
-because the correspondence wasn't visible in the one section read) and
-**#30** (temple cleansing — the robbers-driven-from-the-temple material may
-sit in Wars 6 rather than the cited 5.7.2).
+where the argument's elements sit). Re-verification should read ±1 section
+around each citation.
+**Outcome of applying the lesson.** Both flagged candidates upgraded on
+re-read: **#25** (the gate stratagem is in Wars 5.3.3, two sections before
+the citation — men outside the shut gates petitioning to be let in) and
+**#30** (robbers "thrust out of the inner court of the temple," Wars 6.5.1,
+upgraded with a sequence-displacement caveat). The remaining 14 partials
+were graded on correspondence *strength*, not missing elements, so a full
+±1 re-read is lower priority — but #14 (don't look back) and #22 (stripes)
+would be the next candidates if anyone wants to hunt.
 
 ### #11 and #31 — sequence borrows from Matthew
 **Issue.** Two steps need Matthew to complete the "contiguous block of Luke"

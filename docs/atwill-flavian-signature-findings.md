@@ -14,12 +14,19 @@ at home in the mainstream hypothesis that Luke's author knew Josephus's
 writings — the point of the tool is to let you weigh those readings with both
 texts open.
 
-**Tally: 18 supported · 16 partial · 0 unsupported.** No cited passage was
+**Tally: 20 supported · 14 partial · 0 unsupported.** No cited passage was
 missing or misquoted; Atwill's citations are faithful throughout. "Partial"
 means the correspondence is carried substantially by his satiric
-interpretation rather than by shared text. (#3 was upgraded from partial
-after the maintainer located the "right hands" offer in Wars 4.2.2 — see the
-correction note there and `docs/known-issues.md` for the method lesson.)
+interpretation rather than by shared text.
+
+**Correction history.** #3 was upgraded after the maintainer located the "right
+hands" offer in Wars 4.2.2, one section before the cited Sabbath section.
+That exposed a method flaw — I had verified against single sections, while
+Atwill's citations mark where his *quotes* sit, not where his argument's
+elements sit. Re-reading with a ±1-section window then upgraded #25 (the
+gate stratagem in Wars 5.3.3) and #30 (robbers thrust from the temple, Wars
+6.5.1, with a sequence-displacement caveat). Details per entry and in
+`docs/known-issues.md`.
 
 **Sequence note.** The much-repeated claim that the parallels occur *in the
 same order* in Luke and in Josephus's campaign narrative holds broadly for
@@ -262,15 +269,19 @@ between them and the wall of the city." Verbatim lexical overlap, correct
 sequence position, and in both texts the cutting happens in Jerusalem's
 orbit. With #1 and #23, the sharpest match in the set.
 
-### 25. The narrow gate and the shut door — **PARTIAL**
-Luke 13:22–30 ↔ Wars 5.3.5 · [open](http://localhost:3001/?left=kjv-Luke:13:22&right=jos-War-5:3:5&parallel=par-atwill-25)
+### 25. The narrow gate and the shut door — **SUPPORTED** *(upgraded)*
+Luke 13:22–30 ↔ Wars 5.3.3–5 · [open](http://localhost:3001/?left=kjv-Luke:13:22&right=jos-War-5:3:5&parallel=par-atwill-25)
 
-"Strive to enter in at the strait gate… the master of the house… hath shut
-to the door." The cited Josephus section (Titus leveling the approach,
-policing his own troops) is quoted faithfully, but I could not independently
-see the narrow-gate/shut-door correspondence in the section text I read.
-Weakest of the supported-adjacent claims; left at partial pending a closer
-read of the section's continuation.
+"Many… will seek to enter in, and shall not be able… and ye begin to stand
+without, and to knock at the door, saying, Lord, Lord, open unto us."
+Initially graded partial from the cited section alone — but two sections
+earlier (Wars 5.3.3, scroll up in the right pane) is the gate stratagem:
+Jews outside the wall "pretended that they were **excluded by force**, and
+that they **petitioned those that were within to let them in**," while
+confederates on the wall falsely promised "**to open the gates**" to the
+Romans — who rushed to enter and could not. Standing without a shut gate,
+begging entry, is literally the content of the adjacent text. Upgraded on
+the ±1-section re-read.
 
 ## Outside Jerusalem
 
@@ -315,14 +326,17 @@ that Luke wrote after (or with knowledge of) the siege. Supported as text;
 which explanation it supports is the open question the tool exists to hold.
 Sequence caveat: Wars 5.12 comes after the material behind #30.
 
-### 30. Drive out the thieves from the temple — **PARTIAL**
-Luke 19:45–47 ↔ Wars 5.7.2 · [open](http://localhost:3001/?left=kjv-Luke:19:45&right=jos-War-5:7:2&parallel=par-atwill-30)
+### 30. Drive out the thieves from the temple — **SUPPORTED** *(upgraded, with caveat)*
+Luke 19:45–47 ↔ Wars 5.7.2 / see Wars 6.5.1 · [open](http://localhost:3001/?left=kjv-Luke:19:45&right=jos-War-5:7:2&parallel=par-atwill-30)
 
-The temple cleansing: "ye have made it a den of **thieves**." Josephus's
-seditious are called "robbers" throughout (same Greek root, λῃσταί), and the
-Romans breach and drive them backward — but the cited section is the *first
-wall*, not the temple; the robbers are not driven from the temple until Wars
-6. Right verb, right actors, displaced location.
+The temple cleansing: "ye have made it a den of **thieves**" (KJV "thieves"
+= Whiston's "robbers"; both render λῃσταί, Josephus's constant word for the
+seditious). The claimed event is literally in Josephus — Wars 6.5.1: "the
+multitude of the **robbers were thrust out [of the inner court of the
+temple** by the Romans], and had much ado to get into the outward court, and
+from thence into the city." Upgraded on re-read, with a sequence caveat: the
+temple-clearing sits at Wars 6.5.1, while the step's sequence position cites
+the first-wall breach (5.7.2) — same displacement class as #21 and #29.
 
 ## Inside the city
 
