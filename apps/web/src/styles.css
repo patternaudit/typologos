@@ -265,6 +265,21 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   z-index: 20;
 }
 
+/* Wilson reference-layer arcs: beneath user links, quiet and dashed. */
+.motif-arc-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 15;
+}
+.motif-arc {
+  stroke: var(--accent);
+  fill: none;
+  transition: opacity 120ms ease, stroke-width 120ms ease;
+}
+
 /* ---------- link builder (footer) ---------- */
 
 .builder-bar {

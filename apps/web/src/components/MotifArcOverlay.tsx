@@ -1,0 +1,89 @@
+import { useState } from "react";
+import type { LocalRect } from "../hooks/useAnchorRects";
+
+// One arc between a left-pane verse and a right-pane verse that share one or
+// more Wilson motifs.
+export interface MotifArc {
+  key: string; // leftSegId|rightSegId
+  from: LocalRect; // left verse block
+  to: LocalRect; // right verse block
+  headwords: string[]; // shared motifs, deduped
+  leftSegmentId: string;
+  leftRef: string; // e.g. "Exodus 3:2"
+  rightRef: string;
+}
+
+interface MotifArcOverlayProps {
+  arcs: MotifArc[];
+  onArcClick: (leftSegmentId: string, leftRef: string) => void;
+}
+
+function pathFor(from: LocalRect, to: LocalRect): string {
+  const x1 = from.right;
+  const y1 = from.top + from.height / 2;
+  const x2 = to.left;
+  const y2 = to.top + to.height / 2;
+  const dx = Math.max(60, Math.abs(x2 - x1) / 2.4);
+  return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+}
+
+// The Wilson reference layer's strings: quiet dashed arcs, visually beneath
+// the user's own solid links. Hover to see the shared motifs; click to open
+// the drawer on the left verse.
+export function MotifArcOverlay({ arcs, onArcClick }: MotifArcOverlayProps) {
+  const [hover, setHover] = useState<{ key: string; x: number; y: number } | null>(null);
+  const hoveredArc = hover ? arcs.find((a) => a.key === hover.key) ?? null : null;
+
+  return (
+    <>
+      <svg className="motif-arc-overlay">
+        {arcs.map((arc) => {
+          const d = pathFor(arc.from, arc.to);
+          const hovered = hover?.key === arc.key;
+          // More shared motifs -> a slightly heavier string.
+          const width = Math.min(1 + arc.headwords.length * 0.6, 3);
+          return (
+            <g key={arc.key}>
+              <path
+                d={d}
+                stroke="transparent"
+                strokeWidth={14}
+                fill="none"
+                style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                onMouseEnter={(e) => setHover({ key: arc.key, x: e.clientX, y: e.clientY })}
+                onMouseMove={(e) => setHover({ key: arc.key, x: e.clientX, y: e.clientY })}
+                onMouseLeave={() => setHover(null)}
+                onClick={() => onArcClick(arc.leftSegmentId, arc.leftRef)}
+              />
+              <path
+                d={d}
+                className="motif-arc"
+                strokeWidth={hovered ? width + 1 : width}
+                strokeDasharray="6 5"
+                opacity={hovered ? 0.95 : 0.4}
+              />
+            </g>
+          );
+        })}
+      </svg>
+      {hoveredArc && hover && (
+        <div
+          className="motif-tooltip"
+          style={{ left: Math.min(hover.x + 14, window.innerWidth - 210), top: hover.y + 18 }}
+        >
+          <div className="motif-tooltip-row">
+            <span className="motif-tooltip-word">
+              {hoveredArc.leftRef} ↔ {hoveredArc.rightRef}
+            </span>
+          </div>
+          {hoveredArc.headwords.map((h) => (
+            <div className="motif-tooltip-row" key={h}>
+              <span className="motif-tooltip-grade">{h}</span>
+            </div>
+          ))}
+          <div className="motif-tooltip-hint">click for details</div>
+        </div>
+      )}
+    </>
+  );
+}

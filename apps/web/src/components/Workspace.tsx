@@ -16,6 +16,8 @@ import { ConnectorOverlay } from "./ConnectorOverlay";
 import { AnchorControls } from "./AnchorControls";
 import { LinkInspector } from "./LinkInspector";
 import { MotifPanel } from "./MotifPanel";
+import { MotifArcOverlay, type MotifArc } from "./MotifArcOverlay";
+import type { LocalRect } from "../hooks/useAnchorRects";
 
 interface WorkspaceProps {
   workspaceId: string;
@@ -109,22 +111,32 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     } catch {
       /* fall through to defaults */
     }
-    // Deep links win over saved state: ?left=kjv-Exod&right=kjv-Rev (a book
-    // document id) or ?left=doc:<documentId> for legacy standalone documents.
+    // Deep links win over saved state: ?left=kjv-Exod (whole book),
+    // ?left=kjv-Exod:3:2 (book, scrolled to a verse; verse defaults to 1),
+    // or ?left=doc:<documentId> for legacy standalone documents.
     const params = new URLSearchParams(window.location.search);
-    const fromParam = (raw: string | null): PaneView | null => {
+    const fromParam = (
+      raw: string | null,
+    ): { view: PaneView; target: string | null } | null => {
       if (!raw) return null;
-      if (raw.startsWith("doc:")) return { mode: "document", documentId: raw.slice(4) };
-      return { mode: "book", bookId: raw };
+      if (raw.startsWith("doc:")) {
+        return { view: { mode: "document", documentId: raw.slice(4) }, target: null };
+      }
+      const [bookId, ch, v] = raw.split(":");
+      const target = ch ? `seg-${bookId}-${Number(ch)}-${v ? Number(v) : 1}` : null;
+      return { view: { mode: "book", bookId }, target };
     };
+    const qLeft = fromParam(params.get("left"));
+    const qRight = fromParam(params.get("right"));
     setViews({
       left:
-        fromParam(params.get("left")) ??
-        savedLeft ?? { mode: "document", documentId: leftPane.document.id },
+        qLeft?.view ?? savedLeft ?? { mode: "document", documentId: leftPane.document.id },
       right:
-        fromParam(params.get("right")) ??
-        savedRight ?? { mode: "document", documentId: rightPane.document.id },
+        qRight?.view ?? savedRight ?? { mode: "document", documentId: rightPane.document.id },
     });
+    if (qLeft?.target || qRight?.target) {
+      setScrollTargets({ left: qLeft?.target ?? null, right: qRight?.target ?? null });
+    }
   }, [data, views, viewsKey]);
 
   // Persist navigation.
@@ -190,6 +202,61 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     }
     return set;
   }, [data]);
+
+  // Arcs between visible verses of the two panes that share a Wilson motif —
+  // the reference layer's own strings. Recomputed as panes scroll (rects are
+  // refreshed per scroll frame); capped to keep the space readable.
+  const MAX_ARCS = 80;
+  const motifArcs = useMemo<MotifArc[]>(() => {
+    const lp = rects.panes.left;
+    const rp = rects.panes.right;
+    if (!lp || !rp) return [];
+    const MARGIN = 30;
+    const isVisible = (r: LocalRect, pane: LocalRect) =>
+      r.bottom > pane.top - MARGIN && r.top < pane.bottom + MARGIN;
+
+    const collect = (list: PassageMotifInstance[], side: PaneSide, pane: LocalRect) => {
+      const byMotif = new Map<string, PassageMotifInstance[]>();
+      for (const mi of list) {
+        if (!mi.segmentId) continue;
+        const r = rects.blocks[side][mi.segmentId];
+        if (!r || !isVisible(r, pane)) continue;
+        const arr = byMotif.get(mi.motifId) ?? [];
+        arr.push(mi);
+        byMotif.set(mi.motifId, arr);
+      }
+      return byMotif;
+    };
+    const leftBy = collect(motifs.left, "left", lp);
+    const rightBy = collect(motifs.right, "right", rp);
+
+    const byPair = new Map<string, MotifArc>();
+    for (const [motifId, leftInsts] of leftBy) {
+      const rightInsts = rightBy.get(motifId);
+      if (!rightInsts) continue;
+      for (const li of leftInsts) {
+        for (const ri of rightInsts) {
+          if (li.segmentId === ri.segmentId) continue;
+          const key = `${li.segmentId}|${ri.segmentId}`;
+          const existing = byPair.get(key);
+          if (existing) {
+            if (!existing.headwords.includes(li.headword)) existing.headwords.push(li.headword);
+          } else {
+            byPair.set(key, {
+              key,
+              from: rects.blocks.left[li.segmentId!],
+              to: rects.blocks.right[ri.segmentId!],
+              headwords: [li.headword],
+              leftSegmentId: li.segmentId!,
+              leftRef: li.ref,
+              rightRef: ri.ref,
+            });
+          }
+        }
+      }
+    }
+    return [...byPair.values()].slice(0, MAX_ARCS);
+  }, [motifs, rects]);
 
   // Motif instances keyed by the verse segment they annotate, per side.
   const motifsBySegment = useMemo(() => {
@@ -358,10 +425,10 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
   // The motif drawer and the link inspector share the right rail: opening one
   // closes the other.
-  const openMotifPanel = useCallback((side: PaneSide, block: Block) => {
-    if (!block.segmentId) return;
+  const openMotifPanel = useCallback((side: PaneSide, segmentId: string | null, refLabel: string) => {
+    if (!segmentId) return;
     setSelectedLinkId(null);
-    setMotifPanel({ side, segmentId: block.segmentId, refLabel: block.passageRef });
+    setMotifPanel({ side, segmentId, refLabel });
   }, []);
 
   const selectLink = useCallback((id: string | null) => {
@@ -520,7 +587,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
               onNavigate={(v) => navigate("left", v)}
               onSelectionChange={setLeftSelection}
               onAnchorClick={handleAnchorClick}
-              onMotifVerseClick={(block) => openMotifPanel("left", block)}
+              onMotifVerseClick={(block) => openMotifPanel("left", block.segmentId, block.passageRef)}
             />
           ) : (
             <div className="pane pane-loading">Loading passage…</div>
@@ -541,16 +608,21 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
               onNavigate={(v) => navigate("right", v)}
               onSelectionChange={setRightSelection}
               onAnchorClick={handleAnchorClick}
-              onMotifVerseClick={(block) => openMotifPanel("right", block)}
+              onMotifVerseClick={(block) => openMotifPanel("right", block.segmentId, block.passageRef)}
             />
           ) : (
             <div className="pane pane-loading">Loading passage…</div>
           )}
         </div>
 
+        <MotifArcOverlay
+          arcs={motifArcs}
+          onArcClick={(segmentId, refLabel) => openMotifPanel("left", segmentId, refLabel)}
+        />
+
         <ConnectorOverlay
           links={data.links}
-          rects={rects}
+          rects={rects.anchors}
           selectedLinkId={selectedLinkId}
           onSelectLink={selectLink}
         />
