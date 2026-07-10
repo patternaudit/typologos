@@ -12,11 +12,12 @@ export interface MotifArc {
   leftSegmentId: string;
   leftRef: string; // e.g. "Exodus 3:2"
   rightRef: string;
+  parallelId?: string; // set for kind === "parallel"
 }
 
 interface MotifArcOverlayProps {
   arcs: MotifArc[];
-  onArcClick: (leftSegmentId: string, leftRef: string) => void;
+  onArcClick: (arc: MotifArc) => void;
 }
 
 function pathFor(from: LocalRect, to: LocalRect): string {
@@ -54,7 +55,7 @@ export function MotifArcOverlay({ arcs, onArcClick }: MotifArcOverlayProps) {
                 onMouseEnter={(e) => setHover({ key: arc.key, x: e.clientX, y: e.clientY })}
                 onMouseMove={(e) => setHover({ key: arc.key, x: e.clientX, y: e.clientY })}
                 onMouseLeave={() => setHover(null)}
-                onClick={() => onArcClick(arc.leftSegmentId, arc.leftRef)}
+                onClick={() => onArcClick(arc)}
               />
               <path
                 d={d}

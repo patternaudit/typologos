@@ -17,6 +17,7 @@ import { ConnectorOverlay } from "./ConnectorOverlay";
 import { AnchorControls } from "./AnchorControls";
 import { LinkInspector } from "./LinkInspector";
 import { MotifPanel } from "./MotifPanel";
+import { ParallelInspector } from "./ParallelInspector";
 import { MotifArcOverlay, type MotifArc } from "./MotifArcOverlay";
 import type { LocalRect } from "../hooks/useAnchorRects";
 
@@ -56,6 +57,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [sideBooks, setSideBooks] = useState<SideBooks>({ left: null, right: null });
   const [motifs, setMotifs] = useState<SideMotifs>({ left: [], right: [] });
   const [parallels, setParallels] = useState<Parallel[]>([]);
+  const [selectedParallelId, setSelectedParallelId] = useState<string | null>(null);
   const [motifPanel, setMotifPanel] = useState<MotifPanelState | null>(null);
   // Verse block to scroll into view once its pane has rendered (segment id).
   const [scrollTargets, setScrollTargets] = useState<{
@@ -90,7 +92,15 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   useEffect(() => {
     reload();
     api.fetchBooks().then(setBooks).catch(() => setBooks([]));
-    api.fetchParallels().then(setParallels).catch(() => setParallels([]));
+    api
+      .fetchParallels()
+      .then((list) => {
+        setParallels(list);
+        // Deep link: ?parallel=par-atwill-24 opens the claim inspector.
+        const want = new URLSearchParams(window.location.search).get("parallel");
+        if (want && list.some((p) => p.id === want)) setSelectedParallelId(want);
+      })
+      .catch(() => setParallels([]));
   }, [reload]);
 
   // Initialise pane views once data is available: restore saved navigation
@@ -454,18 +464,53 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
   // --- motif drawer ------------------------------------------------------------
 
-  // The motif drawer and the link inspector share the right rail: opening one
-  // closes the other.
+  // The motif drawer, link inspector, and parallel inspector share the right
+  // rail: opening one closes the others.
   const openMotifPanel = useCallback((side: PaneSide, segmentId: string | null, refLabel: string) => {
     if (!segmentId) return;
     setSelectedLinkId(null);
+    setSelectedParallelId(null);
     setMotifPanel({ side, segmentId, refLabel });
   }, []);
 
   const selectLink = useCallback((id: string | null) => {
     setSelectedLinkId(id);
-    if (id) setMotifPanel(null);
+    if (id) {
+      setMotifPanel(null);
+      setSelectedParallelId(null);
+    }
   }, []);
+
+  const handleArcClick = useCallback(
+    (arc: MotifArc) => {
+      if (arc.kind === "parallel" && arc.parallelId) {
+        setSelectedLinkId(null);
+        setMotifPanel(null);
+        setSelectedParallelId(arc.parallelId);
+        return;
+      }
+      openMotifPanel("left", arc.leftSegmentId, arc.leftRef);
+    },
+    [openMotifPanel],
+  );
+
+  // From the inspector: put the NT passage on the left, Josephus on the
+  // right, scrolled to both verses.
+  const openParallelPair = useCallback(
+    (p: Parallel) => {
+      if (!p.leftSegmentId || !p.rightSegmentId) return;
+      setViews({
+        left: { mode: "book", bookId: p.leftDocumentId },
+        right: { mode: "book", bookId: p.rightDocumentId },
+      });
+      setScrollTargets({ left: p.leftSegmentId, right: p.rightSegmentId });
+      setLeftSelection(null);
+      setRightSelection(null);
+    },
+    [],
+  );
+
+  const selectedParallel = parallels.find((p) => p.id === selectedParallelId) ?? null;
 
   // From the drawer, open a referenced passage in the opposite pane and land
   // on the verse (segment ids are deterministic: seg-<doc>-<ch>-<v>). If that
@@ -646,10 +691,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
           )}
         </div>
 
-        <MotifArcOverlay
-          arcs={motifArcs}
-          onArcClick={(segmentId, refLabel) => openMotifPanel("left", segmentId, refLabel)}
-        />
+        <MotifArcOverlay arcs={motifArcs} onArcClick={handleArcClick} />
 
         <ConnectorOverlay
           links={data.links}
@@ -675,6 +717,14 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             instances={motifPanelInstances}
             onClose={() => setMotifPanel(null)}
             onNavigateRef={navigateOppositePane}
+          />
+        )}
+
+        {selectedParallel && (
+          <ParallelInspector
+            parallel={selectedParallel}
+            onClose={() => setSelectedParallelId(null)}
+            onOpenPair={openParallelPair}
           />
         )}
       </div>

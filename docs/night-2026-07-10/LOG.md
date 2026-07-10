@@ -155,11 +155,21 @@ down outside Jerusalem in both. Whether that's Flavian signature, Luke using
 Josephus as a source (the mainstream "Luke knew Josephus" hypothesis), or
 shared apocalyptic stock imagery — the side-by-side reading is now one click.
 
+## 4. Parallel claim inspector
+
+![parallel inspector](08-parallel-inspector.png)
+
+Clicking a slate-blue arc now opens a claim inspector in the right rail:
+verdict chip (green supported / amber partial), Atwill's quoted excerpts for
+both sides, the full verification note, and an **Open both passages** button
+that sets up the exact side-by-side juxtaposition. Deep-linkable:
+`?parallel=par-atwill-32`.
+
 ## Morning menu
 
-- The 19 unchecked parallels (same method: read both sides, set verdict).
-- Parallels in the drawer (click a parallel arc → full claim + quotes +
-  verification note, like the Wilson drawer).
+- Refine #34's endpoints (Simon/John core is Wars 7.5.6) and consider adding
+  Atwill's foundational parallels from chapters 2–4, 6–7 (Gadara demons in
+  depth, Eleazar/Lazarus, Decius Mundus) beyond the ch. 5 sequence.
 - The minimap (density strip per pane; the arcs want an overview scale).
 - Multi-verse ranges (Atwill's NT citations are ranges; arcs currently anchor
   the first verse).
