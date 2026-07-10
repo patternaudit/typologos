@@ -167,6 +167,13 @@ that sets up the exact side-by-side juxtaposition. Deep-linkable:
 
 ## Morning menu
 
+- **Antiquities + the "Luke used Josephus" layer** (task #7): import
+  Whiston's *Antiquities* via the existing pipeline and load the Mason/Pervo
+  dependence touchpoints (Theudas/Judas order artifact in Acts 5:36–37 ↔
+  Ant. 20.97–102, the Egyptian & sicarii, the census, Lysanias, the Claudius
+  famine, Agrippa's death) as `source = 'mason-dependence'` — so all three
+  explanations of the shared material (coincidence, dependence, Flavian
+  authorship) sit side by side as distinguishable arc layers.
 - Refine #34's endpoints (Simon/John core is Wars 7.5.6) and consider adding
   Atwill's foundational parallels from chapters 2–4, 6–7 (Gadara demons in
   depth, Eleazar/Lazarus, Decius Mundus) beyond the ch. 5 sequence.
