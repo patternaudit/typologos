@@ -18,6 +18,7 @@ import { AnchorControls } from "./AnchorControls";
 import { LinkInspector } from "./LinkInspector";
 import { MotifPanel } from "./MotifPanel";
 import { ParallelInspector } from "./ParallelInspector";
+import { Overview } from "./Overview";
 import { MotifArcOverlay, type MotifArc } from "./MotifArcOverlay";
 import type { LocalRect } from "../hooks/useAnchorRects";
 
@@ -59,6 +60,9 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [parallels, setParallels] = useState<Parallel[]>([]);
   const [selectedParallelId, setSelectedParallelId] = useState<string | null>(null);
   const [motifPanel, setMotifPanel] = useState<MotifPanelState | null>(null);
+  const [overviewOpen, setOverviewOpen] = useState(
+    () => new URLSearchParams(window.location.search).get("overview") === "1",
+  );
   // Verse block to scroll into view once its pane has rendered (segment id).
   const [scrollTargets, setScrollTargets] = useState<{
     left: string | null;
@@ -512,6 +516,22 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
   const selectedParallel = parallels.find((p) => p.id === selectedParallelId) ?? null;
 
+  // From the overview: load a chapter pair into the reading panes.
+  const openOverviewPair = useCallback(
+    (leftDoc: string, leftChapter: number, rightDoc: string, rightChapter: number) => {
+      setViews({
+        left: { mode: "book", bookId: leftDoc },
+        right: { mode: "book", bookId: rightDoc },
+      });
+      setScrollTargets({
+        left: `seg-${leftDoc}-${leftChapter}-1`,
+        right: `seg-${rightDoc}-${rightChapter}-1`,
+      });
+      setOverviewOpen(false);
+    },
+    [],
+  );
+
   // From the drawer, open a referenced passage in the opposite pane and land
   // on the verse (segment ids are deterministic: seg-<doc>-<ch>-<v>). If that
   // pane already shows the book, just scroll — no refetch.
@@ -629,6 +649,12 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             ? `${leftData.reference} ↔ ${rightData.reference}`
             : data.workspace.title}
         </div>
+        <button
+          className={`ghost overview-toggle ${overviewOpen ? "active" : ""}`}
+          onClick={() => setOverviewOpen((v) => !v)}
+        >
+          {overviewOpen ? "Reading view" : "Overview"}
+        </button>
         <div className="selection-actions">
           <SelectionAction
             label={leftData?.title ?? "Left"}
@@ -646,6 +672,14 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
       </header>
 
       <div className="workspace-main" ref={mainRef}>
+        {overviewOpen && (
+          <Overview
+            initialLeft={new URLSearchParams(window.location.search).get("a") ?? undefined}
+            initialRight={new URLSearchParams(window.location.search).get("b") ?? undefined}
+            onClose={() => setOverviewOpen(false)}
+            onOpenPair={openOverviewPair}
+          />
+        )}
         <div className="panes">
           {leftData ? (
             <PassagePane
@@ -729,7 +763,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
         )}
       </div>
 
-      <footer className="builder-bar">
+      <footer className="builder-bar" hidden={overviewOpen}>
         <AnchorControls
           sourceAnchor={draftSourceId ? anchorsById.get(draftSourceId) ?? null : null}
           targetAnchor={draftTargetId ? anchorsById.get(draftTargetId) ?? null : null}

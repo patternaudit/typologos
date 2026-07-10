@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { nanoid } from "nanoid";
 import { db } from "./db/client.js";
+import { NT_OSIS, OT_OSIS, bookName } from "./corpus/books.js";
 import type {
   Anchor,
   BookPassage,
@@ -350,6 +351,192 @@ app.get("/api/motifs/:id", (c) => {
     instances: instanceRows.map(toMotifInstance),
   };
   return c.json(payload);
+});
+
+// --- overview: whole-scope connection map -----------------------------------
+
+// A scope is an ordered shelf of documents.
+function scopeDocs(scope: string): { label: string; ids: string[] } | null {
+  if (scope === "ot") return { label: "Old Testament", ids: OT_OSIS.map((b) => `kjv-${b}`) };
+  if (scope === "nt") return { label: "New Testament", ids: NT_OSIS.map((b) => `kjv-${b}`) };
+  if (scope === "bible") {
+    return {
+      label: "Bible (KJV)",
+      ids: [...OT_OSIS, ...NT_OSIS].map((b) => `kjv-${b}`),
+    };
+  }
+  if (scope === "wars") {
+    return { label: "Wars of the Jews", ids: [1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`) };
+  }
+  if (scope === "josephus") {
+    return {
+      label: "Josephus",
+      ids: [...[1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`), "jos-Life"],
+    };
+  }
+  if (scope.startsWith("book:")) {
+    const id = scope.slice(5);
+    const row = db.prepare("SELECT title FROM documents WHERE id = ?").get(id) as
+      | Row
+      | undefined;
+    return row ? { label: row.title as string, ids: [id] } : null;
+  }
+  return null;
+}
+
+function inClause(n: number): string {
+  return Array.from({ length: n }, () => "?").join(",");
+}
+
+// The chapter skeleton of a scope, with verse counts for proportional layout.
+app.get("/api/overview/structure", (c) => {
+  const scope = c.req.query("scope") ?? "";
+  const def = scopeDocs(scope);
+  if (!def) return c.json({ error: `unknown scope: ${scope}` }, 400);
+
+  const rows = def.ids.length
+    ? (db
+        .prepare(
+          `SELECT document_id, chapter, COUNT(*) AS verses FROM segments
+           WHERE kind = 'verse' AND document_id IN (${inClause(def.ids.length)})
+           GROUP BY document_id, chapter ORDER BY document_id, chapter`,
+        )
+        .all(...def.ids) as Row[])
+    : [];
+  const titles = new Map(
+    (
+      db
+        .prepare(`SELECT id, title FROM documents WHERE id IN (${inClause(def.ids.length)})`)
+        .all(...def.ids) as Row[]
+    ).map((r) => [r.id as string, r.title as string]),
+  );
+
+  const byDoc = new Map<string, { chapter: number; verses: number }[]>();
+  for (const r of rows) {
+    const id = r.document_id as string;
+    const list = byDoc.get(id) ?? [];
+    list.push({ chapter: Number(r.chapter), verses: Number(r.verses) });
+    byDoc.set(id, list);
+  }
+
+  let totalVerses = 0;
+  const books = def.ids
+    .filter((id) => byDoc.has(id))
+    .map((id) => {
+      const chapters = byDoc.get(id)!;
+      totalVerses += chapters.reduce((n, ch) => n + ch.verses, 0);
+      return { documentId: id, title: titles.get(id) ?? bookName(id), chapters };
+    });
+
+  return c.json({ scope, label: def.label, books, totalVerses });
+});
+
+// All chapter-pair connections between two scopes: Wilson shared motifs
+// (aggregated with counts), claimed parallels, and user links.
+app.get("/api/overview/connections", (c) => {
+  const left = scopeDocs(c.req.query("left") ?? "");
+  const right = scopeDocs(c.req.query("right") ?? "");
+  if (!left || !right) return c.json({ error: "unknown scope" }, 400);
+  const leftSet = new Set(left.ids);
+  const rightSet = new Set(right.ids);
+
+  const connections: {
+    kind: "wilson" | "parallel" | "link";
+    leftDocumentId: string;
+    leftChapter: number;
+    rightDocumentId: string;
+    rightChapter: number;
+    weight: number;
+    label: string;
+  }[] = [];
+
+  // Wilson: chapter pairs sharing motifs (same-chapter self-pairs excluded).
+  const wilsonRows = db
+    .prepare(
+      `SELECT l.document_id ld, l.chapter lc, r.document_id rd, r.chapter rc,
+              COUNT(DISTINCT l.motif_id) AS n,
+              group_concat(DISTINCT m.headword) AS heads
+       FROM motif_instances l
+       JOIN motif_instances r ON r.motif_id = l.motif_id
+       JOIN motifs m ON m.id = l.motif_id
+       WHERE l.document_id IN (${inClause(left.ids.length)})
+         AND r.document_id IN (${inClause(right.ids.length)})
+         AND NOT (l.document_id = r.document_id AND l.chapter = r.chapter)
+       GROUP BY l.document_id, l.chapter, r.document_id, r.chapter`,
+    )
+    .all(...left.ids, ...right.ids) as Row[];
+  for (const r of wilsonRows) {
+    const heads = (r.heads as string).split(",");
+    connections.push({
+      kind: "wilson",
+      leftDocumentId: r.ld as string,
+      leftChapter: Number(r.lc),
+      rightDocumentId: r.rd as string,
+      rightChapter: Number(r.rc),
+      weight: Number(r.n),
+      label: heads.slice(0, 6).join(" · ") + (heads.length > 6 ? ` +${heads.length - 6}` : ""),
+    });
+  }
+
+  // Claimed parallels (both orientations against the chosen scopes).
+  const parRows = db
+    .prepare(
+      `SELECT p.title, ls.document_id ld, ls.chapter lc, rs.document_id rd, rs.chapter rc
+       FROM parallels p
+       JOIN segments ls ON ls.id = p.left_segment_id
+       JOIN segments rs ON rs.id = p.right_segment_id`,
+    )
+    .all() as Row[];
+  for (const r of parRows) {
+    const ld = r.ld as string;
+    const rd = r.rd as string;
+    const orientations: [string, number, string, number][] = [];
+    if (leftSet.has(ld) && rightSet.has(rd)) orientations.push([ld, Number(r.lc), rd, Number(r.rc)]);
+    if (leftSet.has(rd) && rightSet.has(ld)) orientations.push([rd, Number(r.rc), ld, Number(r.lc)]);
+    for (const [a, ac, b, bc] of orientations) {
+      connections.push({
+        kind: "parallel",
+        leftDocumentId: a,
+        leftChapter: ac,
+        rightDocumentId: b,
+        rightChapter: bc,
+        weight: 1,
+        label: r.title as string,
+      });
+    }
+  }
+
+  // User links (segment-anchored ones).
+  const linkRows = db
+    .prepare(
+      `SELECT l.title, l.type, ls.document_id ld, ls.chapter lc, rs.document_id rd, rs.chapter rc
+       FROM links l
+       JOIN anchors la ON la.id = l.source_anchor_id
+       JOIN segments ls ON ls.id = la.segment_id
+       JOIN anchors ra ON ra.id = l.target_anchor_id
+       JOIN segments rs ON rs.id = ra.segment_id`,
+    )
+    .all() as Row[];
+  for (const r of linkRows) {
+    const ld = r.ld as string;
+    const rd = r.rd as string;
+    const orientations: [string, number, string, number][] = [];
+    if (leftSet.has(ld) && rightSet.has(rd)) orientations.push([ld, Number(r.lc), rd, Number(r.rc)]);
+    if (leftSet.has(rd) && rightSet.has(ld)) orientations.push([rd, Number(r.rc), ld, Number(r.lc)]);
+    for (const [a, ac, b, bc] of orientations) {
+      connections.push({
+        kind: "link",
+        leftDocumentId: a,
+        leftChapter: ac,
+        rightDocumentId: b,
+        rightChapter: bc,
+        weight: 1,
+        label: (r.title as string) || (r.type as string),
+      });
+    }
+  }
+
+  return c.json(connections);
 });
 
 // All claimed passage parallels (e.g. Atwill's Flavian Signature sequence).

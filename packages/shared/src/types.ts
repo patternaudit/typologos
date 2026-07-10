@@ -191,6 +191,41 @@ export interface Parallel {
   updatedAt: string;
 }
 
+// ---- overview (whole-scope connection map) ----
+
+// A scope is an ordered shelf of documents: "bible", "ot", "nt", "josephus",
+// "wars", or "book:<documentId>".
+export type ScopeId = string;
+
+export interface ScopeChapter {
+  chapter: number;
+  verses: number; // verse count, for proportional layout
+}
+
+export interface ScopeBook {
+  documentId: string;
+  title: string;
+  chapters: ScopeChapter[];
+}
+
+export interface OverviewStructure {
+  scope: ScopeId;
+  label: string;
+  books: ScopeBook[];
+  totalVerses: number;
+}
+
+// One chapter-pair connection between the two scopes, aggregated.
+export interface OverviewConnection {
+  kind: "wilson" | "parallel" | "link";
+  leftDocumentId: string;
+  leftChapter: number;
+  rightDocumentId: string;
+  rightChapter: number;
+  weight: number; // shared-motif count (wilson) or 1
+  label: string; // hover text: motif names / parallel title / link title
+}
+
 // ---- API request payloads ----
 
 export interface CreateAnchorInput {

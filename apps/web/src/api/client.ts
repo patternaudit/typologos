@@ -7,6 +7,8 @@ import type {
   HydratedWorkspace,
   Link,
   MotifDetail,
+  OverviewConnection,
+  OverviewStructure,
   Parallel,
   PassageMotifInstance,
   UpdateLinkInput,
@@ -40,6 +42,21 @@ export function fetchBookMotifs(documentId: string): Promise<PassageMotifInstanc
 
 export function fetchParallels(): Promise<Parallel[]> {
   return fetch("/api/parallels").then((r) => json<Parallel[]>(r));
+}
+
+export function fetchOverviewStructure(scope: string): Promise<OverviewStructure> {
+  return fetch(`/api/overview/structure?scope=${encodeURIComponent(scope)}`).then((r) =>
+    json<OverviewStructure>(r),
+  );
+}
+
+export function fetchOverviewConnections(
+  left: string,
+  right: string,
+): Promise<OverviewConnection[]> {
+  return fetch(
+    `/api/overview/connections?left=${encodeURIComponent(left)}&right=${encodeURIComponent(right)}`,
+  ).then((r) => json<OverviewConnection[]>(r));
 }
 
 export function fetchMotifDetail(id: string): Promise<MotifDetail> {
