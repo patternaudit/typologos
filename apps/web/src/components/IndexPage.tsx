@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Anchor, Link, MotifDetail, MotifSummary, Parallel } from "@typologos/shared";
 import * as api from "../data";
+import { LoadingIndicator } from "./LoadingIndicator";
 
 // The Index: a browsable table of contents, one layer at a time. The active
 // section lives in the URL (?index=atwill|mason|wilson|links) so the browser
@@ -76,11 +77,17 @@ export function IndexPage({
 }: IndexPageProps) {
   const [filter, setFilter] = useState("");
   const [motifs, setMotifs] = useState<MotifSummary[]>([]);
+  const [motifsLoading, setMotifsLoading] = useState(false);
   const [openMotif, setOpenMotif] = useState<MotifDetail | null>(null);
 
   useEffect(() => {
     if (section === "wilson" && motifs.length === 0) {
-      api.fetchMotifIndex().then(setMotifs).catch(() => setMotifs([]));
+      setMotifsLoading(true);
+      api
+        .fetchMotifIndex()
+        .then(setMotifs)
+        .catch(() => setMotifs([]))
+        .finally(() => setMotifsLoading(false));
     }
   }, [section, motifs.length]);
 
@@ -179,6 +186,7 @@ export function IndexPage({
 
           {section === "wilson" && (
             <>
+              {motifsLoading && <LoadingIndicator label="Loading the symbol index…" />}
               {openMotif && (
                 <div className="index-motif-detail">
                   <div className="motif-item-head">

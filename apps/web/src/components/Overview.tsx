@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { OverviewConnection, OverviewStructure } from "@typologos/shared";
 import * as api from "../data";
+import { LoadingIndicator } from "./LoadingIndicator";
 
 // Whole-scope connection map: two vertical strips (one scope each), every
 // connection between them drawn as an arc. Books stack proportionally to
@@ -145,9 +146,11 @@ export function Overview({
     null,
   );
   const [loadedNote, setLoadedNote] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let stale = false;
+    setLoading(true);
     Promise.all([
       api.fetchOverviewStructure(leftScope),
       api.fetchOverviewStructure(rightScope),
@@ -158,8 +161,11 @@ export function Overview({
         setLeft(l);
         setRight(r);
         setConnections(conns);
+        setLoading(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!stale) setLoading(false);
+      });
     return () => {
       stale = true;
     };
@@ -329,6 +335,11 @@ export function Overview({
       )}
 
       <div className="overview-canvas">
+        {loading && (
+          <div className="overview-loading">
+            <LoadingIndicator label="Mapping the connections…" />
+          </div>
+        )}
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
           {leftLayout && rightLayout && (
             <>
