@@ -14,11 +14,12 @@ import { useAnchorRects } from "../hooks/useAnchorRects";
 import type { Block, PaneData, PaneView, PendingSelection } from "../viewTypes";
 import { PassagePane } from "./PassagePane";
 import { ConnectorOverlay } from "./ConnectorOverlay";
-import { AnchorControls } from "./AnchorControls";
+import { LinkModal } from "./LinkModal";
 import { LinkInspector } from "./LinkInspector";
 import { MotifPanel } from "./MotifPanel";
 import { ParallelInspector } from "./ParallelInspector";
 import { Overview } from "./Overview";
+import { StartScreen } from "./StartScreen";
 import { MotifArcOverlay, type MotifArc } from "./MotifArcOverlay";
 import type { LocalRect } from "../hooks/useAnchorRects";
 
@@ -63,6 +64,15 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [overviewOpen, setOverviewOpen] = useState(
     () => new URLSearchParams(window.location.search).get("overview") === "1",
   );
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  // Land on the curated start screen when arriving with no saved place and no
+  // deep link; reopenable from the topbar.
+  const [startOpen, setStartOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("start") === "1") return true;
+    if ([...params.keys()].length > 0) return false;
+    return localStorage.getItem(`typologos:views:${workspaceId}`) === null;
+  });
   // Verse block to scroll into view once its pane has rendered (segment id).
   const [scrollTargets, setScrollTargets] = useState<{
     left: string | null;
@@ -599,6 +609,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
           rationale: input.rationale || null,
         });
         clearDraft();
+        setLinkModalOpen(false);
         await reload();
         setSelectedLinkId(link.id);
       } catch (e) {
@@ -647,34 +658,39 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     <div className="app">
       <header className="topbar">
         <div className="brand">Typologos</div>
-        <div className="ws-title">
-          {leftData && rightData
-            ? `${leftData.reference} ↔ ${rightData.reference}`
-            : data.workspace.title}
-        </div>
-        <button
-          className={`ghost overview-toggle ${overviewOpen ? "active" : ""}`}
-          onClick={() => setOverviewOpen((v) => !v)}
-        >
-          {overviewOpen ? "Reading view" : "Overview"}
-        </button>
-        <div className="selection-actions">
-          <SelectionAction
-            label={leftData?.title ?? "Left"}
-            selection={leftSelection}
-            disabled={busy}
-            onCreate={() => createAnchor("left")}
-          />
-          <SelectionAction
-            label={rightData?.title ?? "Right"}
-            selection={rightSelection}
-            disabled={busy}
-            onCreate={() => createAnchor("right")}
-          />
-        </div>
+        <nav className="view-switch">
+          <button
+            className={startOpen ? "active" : ""}
+            onClick={() => {
+              setStartOpen(true);
+              setOverviewOpen(false);
+            }}
+          >
+            Start
+          </button>
+          <button
+            className={!overviewOpen && !startOpen ? "active" : ""}
+            onClick={() => {
+              setOverviewOpen(false);
+              setStartOpen(false);
+            }}
+          >
+            Reading
+          </button>
+          <button
+            className={overviewOpen && !startOpen ? "active" : ""}
+            onClick={() => {
+              setOverviewOpen(true);
+              setStartOpen(false);
+            }}
+          >
+            Overview
+          </button>
+        </nav>
       </header>
 
       <div className="workspace-main" ref={mainRef}>
+        {startOpen && <StartScreen onClose={() => setStartOpen(false)} />}
         {overviewOpen && (
           <Overview
             initialLeft={new URLSearchParams(window.location.search).get("a") ?? undefined}
@@ -699,6 +715,13 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
               linkedAnchorIds={linkedAnchorIds}
               motifsBySegment={motifsBySegment.left}
               scrollTargetKey={scrollTargets.left}
+              selection={leftSelection}
+              draftAnchor={draftSourceId ? anchorsById.get(draftSourceId) ?? null : null}
+              draftLabel="Source"
+              busy={busy}
+              onCreateAnchor={() => createAnchor("left")}
+              onClearDraft={() => setDraftSourceId(null)}
+              onDeleteDraftAnchor={() => draftSourceId && deleteAnchor(draftSourceId)}
               onScrollTargetDone={() => consumeScrollTarget("left")}
               onNavigate={(v) => navigate("left", v)}
               onSelectionChange={setLeftSelection}
@@ -720,6 +743,13 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
               linkedAnchorIds={linkedAnchorIds}
               motifsBySegment={motifsBySegment.right}
               scrollTargetKey={scrollTargets.right}
+              selection={rightSelection}
+              draftAnchor={draftTargetId ? anchorsById.get(draftTargetId) ?? null : null}
+              draftLabel="Target"
+              busy={busy}
+              onCreateAnchor={() => createAnchor("right")}
+              onClearDraft={() => setDraftTargetId(null)}
+              onDeleteDraftAnchor={() => draftTargetId && deleteAnchor(draftTargetId)}
               onScrollTargetDone={() => consumeScrollTarget("right")}
               onNavigate={(v) => navigate("right", v)}
               onSelectionChange={setRightSelection}
@@ -767,18 +797,24 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             onOpenPair={openParallelPair}
           />
         )}
+
+        {/* Both endpoints staged: offer the link, centered between the panes. */}
+        {!overviewOpen && draftSourceId && draftTargetId && !linkModalOpen && (
+          <button className="primary create-link-pill" onClick={() => setLinkModalOpen(true)}>
+            Create link →
+          </button>
+        )}
       </div>
 
-      <footer className="builder-bar" hidden={overviewOpen}>
-        <AnchorControls
-          sourceAnchor={draftSourceId ? anchorsById.get(draftSourceId) ?? null : null}
-          targetAnchor={draftTargetId ? anchorsById.get(draftTargetId) ?? null : null}
+      {linkModalOpen && draftSourceId && draftTargetId && (
+        <LinkModal
+          sourceAnchor={anchorsById.get(draftSourceId)!}
+          targetAnchor={anchorsById.get(draftTargetId)!}
           busy={busy}
-          onClear={clearDraft}
+          onCancel={() => setLinkModalOpen(false)}
           onCreate={createLink}
-          onDeleteAnchor={deleteAnchor}
         />
-      </footer>
+      )}
 
       {error && (
         <div className="toast-error" onClick={() => setError(null)}>
@@ -789,25 +825,3 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   );
 }
 
-interface SelectionActionProps {
-  label: string;
-  selection: PendingSelection | null;
-  disabled: boolean;
-  onCreate: () => void;
-}
-
-function SelectionAction({ label, selection, disabled, onCreate }: SelectionActionProps) {
-  return (
-    <div className={`selection-action ${selection ? "active" : ""}`}>
-      <span className="selection-action-label">{label}</span>
-      <button
-        className="primary small"
-        disabled={!selection || disabled}
-        onClick={onCreate}
-        title={selection ? `“${selection.text.slice(0, 60)}”` : "Select text in this passage first"}
-      >
-        + Anchor
-      </button>
-    </div>
-  );
-}

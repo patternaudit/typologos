@@ -24,8 +24,9 @@ npm install
 npm run db:setup        # create tables + seed the Genesis 22 ↔ John 3 demo
 npm run corpus:import   # download + import the full KJV (OSIS -> documents + segments)
 npm run motifs:import   # parse Wilson's "A Dictionary of Bible Types" into motifs
-npm run josephus:import # download + import Whiston's Wars of the Jews + Life
+npm run josephus:import # download + import Whiston's Wars, Antiquities + Life
 npm run atwill:import   # load Atwill's Flavian Signature parallels (NT <-> Josephus)
+npm run mason:import    # load the "Luke used Josephus" dependence touchpoints
 npm run dev             # server on :5179, web on :5173
 ```
 
@@ -99,15 +100,27 @@ textual spot-checking (see `docs/night-2026-07-10/LOG.md`). Rendered as
 slate-blue dotted arcs between panes, distinct from Wilson's amber arcs and
 from user links.
 
-## Reading views
+## Views
 
-Panes hold **whole books** in a continuous scroll; the chapter picker scrolls
-rather than reloads. Verses annotated by Wilson carry a dashed underline —
-hover for the motif brief, click for the Types & Figures drawer. When both
-panes show verses sharing a Wilson motif, a quiet amber arc connects them.
+**Start** — curated entry points into the corpora and layers (first visit
+lands here; `?start=1`).
 
-Deep links: `?left=kjv-Gen:3:7&right=kjv-Rev:22:2` (book:chapter:verse) or
-`?left=doc:<id>` for legacy documents.
+**Reading** — panes hold **whole books** in a continuous scroll; the chapter
+picker scrolls rather than reloads. Verses annotated by Wilson carry a dashed
+underline — hover for the motif brief, click for the Types & Figures drawer.
+Arcs between the panes: amber dashes = shared Wilson motifs, slate dots =
+Atwill parallels, plum dots = Mason dependence, solid colors = your links.
+Select text → a floating **+ Anchor** appears at the pane's foot; with both
+sides staged, **Create link →** opens the definition modal.
+
+**Overview** — the whole-scope connection map: two vertical strips (Bible /
+OT / NT / Josephus / Wars / Antiquities per side), every connection drawn
+between them, layers toggleable. Click an arc to open that chapter pair in
+the reading view; click a book band to load that book.
+
+Deep links: `?left=kjv-Gen:3:7&right=kjv-Rev:22:2` (book:chapter:verse),
+`?parallel=par-atwill-32`, `?overview=1&a=ot&b=nt`, `?left=doc:<id>` for
+legacy documents.
 
 ## How the flow works
 

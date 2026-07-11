@@ -38,6 +38,15 @@ interface PassagePaneProps {
   motifsBySegment: Map<string, PassageMotifInstance[]>;
   // Block key to scroll into view (and briefly flash) once rendered.
   scrollTargetKey: string | null;
+  // This pane's pending text selection and staged draft anchor, for the
+  // floating action bar.
+  selection: PendingSelection | null;
+  draftAnchor: Anchor | null;
+  draftLabel: string; // "Source" | "Target"
+  busy: boolean;
+  onCreateAnchor: () => void;
+  onClearDraft: () => void;
+  onDeleteDraftAnchor: () => void;
   onScrollTargetDone: () => void;
   onNavigate: (view: PaneView) => void;
   onSelectionChange: (selection: PendingSelection | null) => void;
@@ -56,6 +65,13 @@ export function PassagePane({
   linkedAnchorIds,
   motifsBySegment,
   scrollTargetKey,
+  selection,
+  draftAnchor,
+  draftLabel,
+  busy,
+  onCreateAnchor,
+  onClearDraft,
+  onDeleteDraftAnchor,
   onScrollTargetDone,
   onNavigate,
   onSelectionChange,
@@ -217,6 +233,49 @@ export function PassagePane({
           {data.blocks.map(renderBlock)}
         </div>
       </div>
+
+      {/* Floating action bar: appears where the work happens. */}
+      {(selection || draftAnchor) && (
+        <div className="pane-actionbar">
+          {draftAnchor && (
+            <span className="draft-chip" title={draftAnchor.selectedText}>
+              <span className="draft-chip-label">{draftLabel}</span>
+              <span className="draft-chip-text">
+                “{draftAnchor.selectedText.slice(0, 32)}
+                {draftAnchor.selectedText.length > 32 ? "…" : ""}”
+              </span>
+              <button
+                className="chip-button"
+                title="Unselect"
+                disabled={busy}
+                onClick={onClearDraft}
+              >
+                ✕
+              </button>
+              <button
+                className="chip-button chip-danger"
+                title="Delete this anchor"
+                disabled={busy}
+                onClick={onDeleteDraftAnchor}
+              >
+                🗑
+              </button>
+            </span>
+          )}
+          {selection && (
+            <button
+              className="primary small"
+              disabled={busy}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onCreateAnchor}
+              title={`“${selection.text.slice(0, 60)}”`}
+            >
+              + Anchor “{selection.text.slice(0, 20)}
+              {selection.text.length > 20 ? "…" : ""}”
+            </button>
+          )}
+        </div>
+      )}
       {tip && (
         <div
           className="motif-tooltip"

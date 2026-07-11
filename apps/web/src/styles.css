@@ -133,6 +133,7 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 }
 
 .pane {
+  position: relative; /* hosts the floating action bar */
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -562,6 +563,150 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 }
 .parallel-inspector blockquote { border-left-color: #4a6b8a; }
 
+/* ---------- topbar view switch ---------- */
+
+.view-switch {
+  display: inline-flex;
+  border: 1px solid var(--panel-edge);
+  border-radius: 999px;
+  overflow: hidden;
+  background: #fff;
+}
+.view-switch button {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.view-switch button:not(:disabled):hover { transform: none; background: #fff8ea; }
+.view-switch button.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---------- pane action bar (floating, contextual) ---------- */
+
+.pane-actionbar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 92%;
+  padding: 6px 8px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+
+.draft-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid var(--highlight-strong);
+  background: #fff8ea;
+  border-radius: 999px;
+  font-size: 12px;
+  min-width: 0;
+}
+.draft-chip-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+.draft-chip-text {
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.chip-button {
+  border: none;
+  background: transparent;
+  padding: 2px 5px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  border-radius: 999px;
+  line-height: 1;
+}
+.chip-button:not(:disabled):hover { background: var(--highlight); transform: none; }
+.chip-danger:not(:disabled):hover { background: #f3d9d6; color: #a8413c; }
+
+.create-link-pill {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 22;
+  border-radius: 999px;
+  padding: 9px 22px;
+  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(184, 116, 42, 0.4);
+}
+.create-link-pill:not(:disabled):hover { transform: translateX(-50%) translateY(-1px); }
+
+/* ---------- link modal ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(60, 48, 30, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: tipin 120ms ease;
+}
+.modal {
+  width: min(640px, 92vw);
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+}
+.modal-title {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+.modal-endpoints {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.modal-endpoints blockquote {
+  flex: 1;
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: #fff8ea;
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: 110px;
+  overflow: hidden;
+}
+.modal-endpoints .inspector-label { font-style: normal; }
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 /* ---------- overview (whole-scope connection map) ---------- */
 
 .overview-toggle { margin-left: 4px; }
@@ -663,6 +808,72 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   fill: var(--ink-soft);
   font-family: inherit;
   user-select: none;
+}
+
+/* ---------- start screen ---------- */
+
+.start-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 42;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.start-inner {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 44px 32px 80px;
+}
+.start-head { text-align: center; margin-bottom: 34px; }
+.start-head h1 { font-size: 30px; margin: 0 0 10px; }
+.start-head p {
+  max-width: 640px;
+  margin: 0 auto 16px;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.start-group { margin-bottom: 30px; }
+.start-group h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--panel-edge);
+  padding-bottom: 6px;
+  margin: 0 0 14px;
+}
+.start-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+.start-card {
+  display: block;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.start-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: var(--highlight-strong);
+}
+.start-card h3 { margin: 8px 0 6px; font-size: 16px; line-height: 1.3; }
+.start-card p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-soft); }
+.start-tag {
+  display: inline-block;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 9px;
+  border-radius: 999px;
 }
 
 /* ---------- states ---------- */

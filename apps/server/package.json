@@ -11,9 +11,10 @@
     "corpus:download": "mkdir -p data && curl -fsSL -o data/eng-kjv.osis.xml https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-kjv.osis.xml",
     "corpus:import": "tsx src/corpus/import.ts",
     "motifs:import": "tsx src/corpus/wilson.ts",
-    "josephus:download": "curl -fsSL -o data/josephus-wars.txt https://www.gutenberg.org/cache/epub/2850/pg2850.txt && curl -fsSL -o data/josephus-life.txt https://www.gutenberg.org/cache/epub/2846/pg2846.txt",
+    "josephus:download": "curl -fsSL -o data/josephus-wars.txt https://www.gutenberg.org/cache/epub/2850/pg2850.txt && curl -fsSL -o data/josephus-life.txt https://www.gutenberg.org/cache/epub/2846/pg2846.txt && curl -fsSL -o data/josephus-antiquities.txt https://www.gutenberg.org/cache/epub/2848/pg2848.txt",
     "josephus:import": "tsx src/corpus/josephus.ts",
-    "atwill:import": "tsx src/corpus/atwill.ts"
+    "atwill:import": "tsx src/corpus/atwill.ts",
+    "mason:import": "tsx src/corpus/mason.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
