@@ -36,6 +36,8 @@ interface PassagePaneProps {
   selectedLinkAnchorIds: Set<string>;
   linkedAnchorIds: Set<string>;
   motifsBySegment: Map<string, PassageMotifInstance[]>;
+  // Verse segments to keep softly lit (e.g. an open parallel's full range).
+  highlightSegments: Set<string>;
   // Block key to scroll into view (and briefly flash) once rendered.
   scrollTargetKey: string | null;
   // This pane's pending text selection and staged draft anchor, for the
@@ -64,6 +66,7 @@ export function PassagePane({
   selectedLinkAnchorIds,
   linkedAnchorIds,
   motifsBySegment,
+  highlightSegments,
   scrollTargetKey,
   selection,
   draftAnchor,
@@ -92,10 +95,13 @@ export function PassagePane({
     const el = rootRef.current.querySelector(`[data-block-key="${scrollTargetKey}"]`);
     if (!(el instanceof HTMLElement)) return; // not rendered yet; retry next render
     scrollIntoViewSensibly(el, "center");
+    // The flash settles to a faint persistent tint (a breadcrumb of where you
+    // landed) instead of fading to nothing; a new target clears the old one.
+    rootRef.current
+      .querySelectorAll(".verse-flash")
+      .forEach((old) => old !== el && old.classList.remove("verse-flash"));
     el.classList.add("verse-flash");
-    const timer = setTimeout(() => el.classList.remove("verse-flash"), 2400);
     onScrollTargetDone();
-    return () => clearTimeout(timer);
   }, [scrollTargetKey, data, onScrollTargetDone]);
 
   const handleMouseUp = () => {
@@ -143,11 +149,12 @@ export function PassagePane({
     const segments = buildSegments(block.body, block.anchors);
     const blockMotifs = block.segmentId ? motifsBySegment.get(block.segmentId) ?? [] : [];
     const annotated = blockMotifs.length > 0;
+    const lit = block.segmentId !== null && highlightSegments.has(block.segmentId);
     const verseBlock = (
       <div className={`block ${block.verseLabel ? "verse-block" : "doc-block"}`} key={block.key}>
         {block.verseLabel && <sup className="verse-num">{block.verseLabel}</sup>}
         <span
-          className={`block-text ${annotated ? "has-motifs" : ""}`}
+          className={`block-text ${annotated ? "has-motifs" : ""} ${lit ? "range-lit" : ""}`}
           data-block-key={block.key}
           onMouseEnter={
             annotated

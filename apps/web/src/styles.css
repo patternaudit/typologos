@@ -519,15 +519,23 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   color: var(--ink-faint);
 }
 
-/* Brief glow on the verse a drawer navigation landed on. */
-.verse-flash {
-  animation: verseflash 2.4s ease;
+/* The verse a navigation landed on, and the verse ranges of an open
+   parallel: flash in strong, settle to a faint persistent tint, strengthen
+   again on hover. Never fade to nothing while relevant. */
+.verse-flash,
+.block-text.range-lit {
+  animation: verseflash 1.8s ease;
+  background: rgba(246, 226, 189, 0.3);
   border-radius: 4px;
+  transition: background 140ms ease;
+}
+.verse-flash:hover,
+.block-text.range-lit:hover {
+  background: rgba(239, 207, 150, 0.85) !important;
 }
 @keyframes verseflash {
   0% { background: var(--highlight-strong); }
-  60% { background: var(--highlight); }
-  100% { background: transparent; }
+  100% { background: rgba(246, 226, 189, 0.3); }
 }
 
 .motif-panel-note {
