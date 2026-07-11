@@ -70,6 +70,32 @@ async function query(sql: string, params: unknown[] = []): Promise<Row[]> {
   return (await worker.db.query(sql, params)) as Row[];
 }
 
+// Live streaming stats for loading UI. Returns null when the worker isn't
+// ready yet (or in api mode, via the facade).
+export async function staticLoadStats(): Promise<{
+  fetchedBytes: number;
+  totalBytes: number;
+  requests: number;
+} | null> {
+  if (!workerPromise) return null;
+  try {
+    const ready = await Promise.race([
+      workerPromise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 100)),
+    ]);
+    if (!ready) return null;
+    const stats = await ready.worker.getStats();
+    if (!stats) return null;
+    return {
+      fetchedBytes: stats.totalFetchedBytes,
+      totalBytes: stats.totalBytes,
+      requests: stats.totalRequests,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // --- row mappers (mirror the server's) ---------------------------------------
 
 const toDocument = (r: Row): Document => ({

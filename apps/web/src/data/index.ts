@@ -112,6 +112,18 @@ export const updateLink = (id: string, input: UpdateLinkInput): Promise<Link> =>
   user.updateLink(id, input);
 export const deleteLink = (id: string): Promise<void> => user.deleteLink(id);
 
+// --- loading stats (static mode streams the corpus on demand) -----------------
+
+export async function getLoadStats(): Promise<{
+  fetchedBytes: number;
+  totalBytes: number;
+  requests: number;
+} | null> {
+  if (dataMode !== "static") return null;
+  const { staticLoadStats } = await import("./staticCorpus");
+  return staticLoadStats();
+}
+
 // --- portable layer file (Excalidraw-style) -----------------------------------
 
 export async function exportLayerToFile(): Promise<void> {

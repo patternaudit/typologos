@@ -13,6 +13,7 @@ import * as api from "../data";
 import { useAnchorRects } from "../hooks/useAnchorRects";
 import type { Block, PaneData, PaneView, PendingSelection } from "../viewTypes";
 import { PassagePane } from "./PassagePane";
+import { PaneLoading } from "./PaneLoading";
 import { ConnectorOverlay } from "./ConnectorOverlay";
 import { LinkModal } from "./LinkModal";
 import { LinkInspector } from "./LinkInspector";
@@ -812,7 +813,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
               onMotifVerseClick={(block) => openMotifPanel("left", block.segmentId, block.passageRef)}
             />
           ) : (
-            <div className="pane pane-loading">Loading passage…</div>
+            <PaneLoading />
           )}
           {rightData ? (
             <PassagePane
@@ -841,7 +842,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
               onMotifVerseClick={(block) => openMotifPanel("right", block.segmentId, block.passageRef)}
             />
           ) : (
-            <div className="pane pane-loading">Loading passage…</div>
+            <PaneLoading />
           )}
         </div>
 

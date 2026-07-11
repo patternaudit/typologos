@@ -236,6 +236,35 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   font-style: italic;
 }
 
+.loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 340px;
+  text-align: center;
+}
+.loading-bar {
+  width: 240px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--highlight);
+  overflow: hidden;
+}
+.loading-bar-fill {
+  width: 40%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: loadslide 1.2s ease-in-out infinite;
+}
+@keyframes loadslide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+.loading-label { font-size: 13px; font-style: normal; color: var(--ink-soft); }
+.loading-hint { font-size: 11px; line-height: 1.5; color: var(--ink-faint); }
+
 /* ---------- anchors (highlights) ---------- */
 
 .anchor {
