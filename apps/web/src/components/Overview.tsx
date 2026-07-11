@@ -270,16 +270,26 @@ export function Overview({
 
         <span className="ov-group">
           <span className="ov-group-label">Layers</span>
-          {LAYERS.map((l) => (
-            <label key={l.id} className="ov-layer" style={{ color: l.color }} title={l.hint}>
-              <input
-                type="checkbox"
-                checked={layersOn[l.id]}
-                onChange={(e) => setLayersOn({ ...layersOn, [l.id]: e.target.checked })}
-              />
-              {l.label}
-            </label>
-          ))}
+          {LAYERS.map((l) => {
+            // Count what this layer has in the CURRENT comparison, so a zero
+            // is visible instead of a mystery.
+            const count = connections.filter((c) => l.match(c)).length;
+            return (
+              <label
+                key={l.id}
+                className={`ov-layer ${count === 0 ? "ov-layer-empty" : ""}`}
+                style={{ color: count === 0 ? undefined : l.color }}
+                title={count === 0 ? `${l.hint} — none in this comparison` : l.hint}
+              >
+                <input
+                  type="checkbox"
+                  checked={layersOn[l.id]}
+                  onChange={(e) => setLayersOn({ ...layersOn, [l.id]: e.target.checked })}
+                />
+                {l.label} ({count})
+              </label>
+            );
+          })}
         </span>
 
         {wilsonTotal > 0 && (

@@ -757,6 +757,7 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   color: var(--ink-soft);
 }
 .ov-note { color: var(--ink-faint); font-style: italic; }
+.ov-layer-empty { color: var(--ink-faint); font-weight: 400; }
 .overview-bar > button { margin-left: auto; }
 
 .ov-group {
