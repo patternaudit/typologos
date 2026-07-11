@@ -1,0 +1,8 @@
+{
+ "serverMode": "chunked",
+ "urlPrefix": "typologos-public.sqlite.",
+ "serverChunkSize": 19976192,
+ "databaseLengthBytes": 19976192,
+ "suffixLength": 1,
+ "requestChunkSize": 4096
+}

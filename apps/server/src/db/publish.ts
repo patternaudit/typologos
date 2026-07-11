@@ -17,7 +17,11 @@ import { DatabaseSync } from "node:sqlite";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = join(__dirname, "..", "..", "typologos.sqlite");
 const OUT_DIR = join(__dirname, "..", "..", "..", "web", "public");
-const OUT = join(OUT_DIR, "typologos-public.sqlite");
+// Served as a single-chunk "chunked" database: the manifest carries the byte
+// length, so the browser never needs a HEAD request (GitHub Pages gzips
+// octet-streams for browsers, which hides the true Content-Length).
+const OUT = join(OUT_DIR, "typologos-public.sqlite.0");
+const MANIFEST = join(OUT_DIR, "typologos-db.json");
 const TMP = OUT + ".tmp";
 
 const keepRationales = process.argv.includes("--keep-rationales");
@@ -60,4 +64,21 @@ db.close();
 
 fs.renameSync(TMP, OUT);
 const size = fs.statSync(OUT).size;
-console.log(`[publish] wrote ${OUT} (${(size / 1024 / 1024).toFixed(1)} MB)`);
+fs.writeFileSync(
+  MANIFEST,
+  JSON.stringify(
+    {
+      serverMode: "chunked",
+      urlPrefix: "typologos-public.sqlite.",
+      serverChunkSize: size,
+      databaseLengthBytes: size,
+      suffixLength: 1,
+      requestChunkSize: 4096,
+    },
+    null,
+    1,
+  ),
+);
+// Drop the old single-file name if present (pre-manifest layout).
+fs.rmSync(join(OUT_DIR, "typologos-public.sqlite"), { force: true });
+console.log(`[publish] wrote ${OUT} (${(size / 1024 / 1024).toFixed(1)} MB) + manifest`);

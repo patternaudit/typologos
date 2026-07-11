@@ -24,7 +24,11 @@ import type { CorpusSource } from "./types";
 
 const BASE =
   (import.meta as unknown as { env?: Record<string, string> }).env?.BASE_URL ?? "/";
-const DB_URL = BASE + "typologos-public.sqlite";
+// The manifest (written by db:publish) declares the database's byte length,
+// so no HEAD request is needed — some CDNs (GitHub Pages) gzip octet-streams
+// for browsers, which masks the true Content-Length and breaks length
+// discovery. Range GETs are served identity-encoded everywhere.
+const DB_CONFIG_URL = BASE + "typologos-db.json";
 const WORKER_URL = BASE + "sqlite.worker.js";
 const WASM_URL = BASE + "sql-wasm.wasm";
 
@@ -33,16 +37,7 @@ let workerPromise: Promise<WorkerHttpvfs> | null = null;
 function getWorker(): Promise<WorkerHttpvfs> {
   if (!workerPromise) {
     workerPromise = createDbWorker(
-      [
-        {
-          from: "inline",
-          config: {
-            serverMode: "full",
-            url: DB_URL,
-            requestChunkSize: 4096,
-          },
-        },
-      ],
+      [{ from: "jsonconfig", configUrl: DB_CONFIG_URL }],
       WORKER_URL,
       WASM_URL,
     );
