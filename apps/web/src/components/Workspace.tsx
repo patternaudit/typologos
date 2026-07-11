@@ -21,7 +21,7 @@ import { MotifPanel } from "./MotifPanel";
 import { ParallelInspector } from "./ParallelInspector";
 import { Overview } from "./Overview";
 import { StartScreen } from "./StartScreen";
-import { IndexPage } from "./IndexPage";
+import { IndexPage, type IndexSection } from "./IndexPage";
 import { MotifArcOverlay, type MotifArc } from "./MotifArcOverlay";
 import type { LocalRect } from "../hooks/useAnchorRects";
 
@@ -54,6 +54,32 @@ interface MotifPanelState {
   refLabel: string;
 }
 
+// ?left=kjv-Exod:3:2 -> a book view plus a scroll target (verse defaults to 1);
+// ?left=doc:<id> -> a legacy standalone document.
+function viewFromParam(raw: string | null): { view: PaneView; target: string | null } | null {
+  if (!raw) return null;
+  if (raw.startsWith("doc:")) {
+    return { view: { mode: "document", documentId: raw.slice(4) }, target: null };
+  }
+  const [bookId, ch, v] = raw.split(":");
+  const target = ch ? `seg-${bookId}-${Number(ch)}-${v ? Number(v) : 1}` : null;
+  return { view: { mode: "book", bookId }, target };
+}
+
+// seg-kjv-Luke-5-10 -> "kjv-Luke:5:10" (deep-link parameter form)
+function segToParam(seg: string | null): string | null {
+  if (!seg) return null;
+  const m = seg.match(/^seg-(.+)-(\d+)-(\d+)$/);
+  return m ? `${m[1]}:${m[2]}:${m[3]}` : null;
+}
+
+const INDEX_SLUGS: IndexSection[] = ["atwill", "mason", "wilson", "links"];
+
+function indexSectionFromParam(raw: string | null): IndexSection | null {
+  if (raw === "1") return "atwill"; // legacy links
+  return INDEX_SLUGS.includes(raw as IndexSection) ? (raw as IndexSection) : null;
+}
+
 export function Workspace({ workspaceId }: WorkspaceProps) {
   const [data, setData] = useState<HydratedWorkspace | null>(null);
   const [books, setBooks] = useState<BookSummary[]>([]);
@@ -75,8 +101,8 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     if (params.get("start") === "1") return true;
     return [...params.keys()].length === 0;
   });
-  const [indexOpen, setIndexOpen] = useState(
-    () => new URLSearchParams(window.location.search).get("index") === "1",
+  const [indexSection, setIndexSection] = useState<IndexSection | null>(() =>
+    indexSectionFromParam(new URLSearchParams(window.location.search).get("index")),
   );
   // Verse block to scroll into view once its pane has rendered (segment id).
   const [scrollTargets, setScrollTargets] = useState<{
@@ -98,6 +124,44 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [importNote, setImportNote] = useState<string | null>(null);
   const viewsKey = `typologos:views:${workspaceId}`;
   const bumpLayout = useCallback(() => setVersion((v) => v + 1), []);
+
+  // Re-derive view state from the URL (initial load, history navigation, and
+  // in-app pushState navigation all funnel through here).
+  const applyLocation = useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    setStartOpen(params.get("start") === "1" || [...params.keys()].length === 0);
+    setIndexSection(indexSectionFromParam(params.get("index")));
+    setOverviewOpen(params.get("overview") === "1");
+    const qLeft = viewFromParam(params.get("left"));
+    const qRight = viewFromParam(params.get("right"));
+    if (qLeft || qRight) {
+      setViews((v) => ({ left: qLeft?.view ?? v.left, right: qRight?.view ?? v.right }));
+      setScrollTargets({ left: qLeft?.target ?? null, right: qRight?.target ?? null });
+    }
+    const par = params.get("parallel");
+    setSelectedParallelId(par);
+    if (par) {
+      setMotifPanel(null);
+      setSelectedLinkId(null);
+    }
+  }, []);
+
+  // In-app navigation that participates in browser history: e.g. index ->
+  // claim pushes an entry, so Back returns to the index section.
+  const gotoUrl = useCallback(
+    (search: string) => {
+      const url = search ? `${window.location.pathname}?${search}` : window.location.pathname;
+      window.history.pushState(null, "", url);
+      applyLocation();
+    },
+    [applyLocation],
+  );
+
+  useEffect(() => {
+    const onPop = () => applyLocation();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [applyLocation]);
 
   const reload = useCallback(async () => {
     try {
@@ -151,23 +215,10 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     } catch {
       /* fall through to defaults */
     }
-    // Deep links win over saved state: ?left=kjv-Exod (whole book),
-    // ?left=kjv-Exod:3:2 (book, scrolled to a verse; verse defaults to 1),
-    // or ?left=doc:<documentId> for legacy standalone documents.
+    // Deep links win over saved state.
     const params = new URLSearchParams(window.location.search);
-    const fromParam = (
-      raw: string | null,
-    ): { view: PaneView; target: string | null } | null => {
-      if (!raw) return null;
-      if (raw.startsWith("doc:")) {
-        return { view: { mode: "document", documentId: raw.slice(4) }, target: null };
-      }
-      const [bookId, ch, v] = raw.split(":");
-      const target = ch ? `seg-${bookId}-${Number(ch)}-${v ? Number(v) : 1}` : null;
-      return { view: { mode: "book", bookId }, target };
-    };
-    const qLeft = fromParam(params.get("left"));
-    const qRight = fromParam(params.get("right"));
+    const qLeft = viewFromParam(params.get("left"));
+    const qRight = viewFromParam(params.get("right"));
     setViews({
       left: qLeft?.view ?? savedLeft ?? leftDefault,
       right: qRight?.view ?? savedRight ?? rightDefault,
@@ -705,38 +756,34 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             onClick={() => {
               setStartOpen(true);
               setOverviewOpen(false);
-              setIndexOpen(false);
+              setIndexSection(null);
             }}
           >
             Start
           </button>
           <button
-            className={!overviewOpen && !startOpen && !indexOpen ? "active" : ""}
+            className={!overviewOpen && !startOpen && !indexSection ? "active" : ""}
             onClick={() => {
               setOverviewOpen(false);
               setStartOpen(false);
-              setIndexOpen(false);
+              setIndexSection(null);
             }}
           >
             Reading
           </button>
           <button
-            className={overviewOpen && !startOpen && !indexOpen ? "active" : ""}
+            className={overviewOpen && !startOpen && !indexSection ? "active" : ""}
             onClick={() => {
               setOverviewOpen(true);
               setStartOpen(false);
-              setIndexOpen(false);
+              setIndexSection(null);
             }}
           >
             Overview
           </button>
           <button
-            className={indexOpen && !startOpen ? "active" : ""}
-            onClick={() => {
-              setIndexOpen(true);
-              setOverviewOpen(false);
-              setStartOpen(false);
-            }}
+            className={indexSection && !startOpen ? "active" : ""}
+            onClick={() => gotoUrl("index=atwill")}
           >
             Index
           </button>
@@ -791,44 +838,40 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
       <div className="workspace-main" ref={mainRef}>
         {startOpen && <StartScreen onClose={() => setStartOpen(false)} />}
-        {indexOpen && !startOpen && (
+        {indexSection && !startOpen && (
           <IndexPage
+            section={indexSection}
             parallels={parallels}
             links={data.links}
             anchorsById={anchorsById}
+            onSectionChange={(s) => gotoUrl(`index=${s}`)}
             onOpenParallel={(p) => {
-              openParallelPair(p);
-              setSelectedParallelId(p.id);
-              setIndexOpen(false);
-              setOverviewOpen(false);
+              const l = segToParam(p.leftSegmentId);
+              const r = segToParam(p.rightSegmentId);
+              if (l && r) gotoUrl(`left=${l}&right=${r}&parallel=${p.id}`);
             }}
             onOpenLink={(l) => {
               const s = anchorsById.get(l.sourceAnchorId);
               const t = anchorsById.get(l.targetAnchorId);
-              const viewFor = (a: Anchor | undefined): PaneView | null => {
-                if (!a) return null;
-                return a.segmentId
-                  ? { mode: "book", bookId: a.documentId }
-                  : { mode: "document", documentId: a.documentId };
-              };
-              const lv = viewFor(s);
-              const rv = viewFor(t);
-              if (lv && rv) {
-                setViews({ left: lv, right: rv });
-                setScrollTargets({
-                  left: s?.segmentId ?? null,
-                  right: t?.segmentId ?? null,
-                });
+              const lp = segToParam(s?.segmentId ?? null);
+              const rp = segToParam(t?.segmentId ?? null);
+              if (lp && rp) {
+                gotoUrl(`left=${lp}&right=${rp}`);
+              } else {
+                // Legacy document-mode anchors: state-only navigation.
+                const viewFor = (a: Anchor | undefined): PaneView | null =>
+                  a ? { mode: "document", documentId: a.documentId } : null;
+                const lv = viewFor(s);
+                const rv = viewFor(t);
+                if (lv && rv) setViews({ left: lv, right: rv });
+                setIndexSection(null);
               }
               selectLink(l.id);
-              setIndexOpen(false);
-              setOverviewOpen(false);
             }}
             onOpenInstance={(documentId, chapter, verse) => {
-              setViews((v) => ({ ...v, left: { mode: "book", bookId: documentId } }));
-              setScrollTargets((t) => ({ ...t, left: `seg-${documentId}-${chapter}-${verse}` }));
-              setIndexOpen(false);
-              setOverviewOpen(false);
+              const right =
+                views.right?.mode === "book" ? `&right=${views.right.bookId}` : "";
+              gotoUrl(`left=${documentId}:${chapter}:${verse}${right}`);
             }}
           />
         )}

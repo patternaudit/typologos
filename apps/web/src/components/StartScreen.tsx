@@ -12,6 +12,8 @@ interface Entry {
 interface Group {
   heading: string;
   entries: Entry[];
+  indexHref?: string; // small "browse the full index" link under the cards
+  indexLabel?: string;
 }
 
 const GROUPS: Group[] = [
@@ -41,18 +43,12 @@ const GROUPS: Group[] = [
         tag: "overview",
         color: "#b8742a",
       },
-      {
-        title: "The Index",
-        blurb:
-          "Every connection, listed: all 34 Atwill parallels with verdicts, the Mason touchpoints, and Wilson's 1,100 symbols — searchable, one click to open any of them.",
-        href: "?index=1",
-        tag: "index",
-        color: "#9b9183",
-      },
     ],
   },
   {
-    heading: "Typology (Wilson's dictionary)",
+    heading: "Wilson's dictionary",
+    indexHref: "?index=wilson",
+    indexLabel: "Browse all 1,100 symbols in the index →",
     entries: [
       {
         title: "Fig leaves ↔ leaves of healing",
@@ -81,7 +77,9 @@ const GROUPS: Group[] = [
     ],
   },
   {
-    heading: "Caesar's Messiah (Atwill) — checked against the texts",
+    heading: "Caesar's Messiah by Joseph Atwill",
+    indexHref: "?index=atwill",
+    indexLabel: "Browse all 34 parallels in the index →",
     entries: [
       {
         title: "Fishing for men at the Sea of Galilee",
@@ -110,7 +108,9 @@ const GROUPS: Group[] = [
     ],
   },
   {
-    heading: "Did Luke read Josephus? (the mainstream hypothesis)",
+    heading: "Did Luke read Josephus? — the mainstream hypothesis",
+    indexHref: "?index=mason",
+    indexLabel: "Browse all 10 touchpoints in the index →",
     entries: [
       {
         title: "The Theudas problem",
@@ -174,6 +174,11 @@ export function StartScreen({ onClose }: StartScreenProps) {
                 </a>
               ))}
             </div>
+            {g.indexHref && (
+              <a className="start-index-link" href={g.indexHref}>
+                {g.indexLabel}
+              </a>
+            )}
           </section>
         ))}
       </div>
