@@ -36,10 +36,28 @@ let workerPromise: Promise<WorkerHttpvfs> | null = null;
 
 function getWorker(): Promise<WorkerHttpvfs> {
   if (!workerPromise) {
-    workerPromise = createDbWorker(
+    console.log("[staticCorpus] creating db worker", { DB_CONFIG_URL, WORKER_URL, WASM_URL });
+    const created = createDbWorker(
       [{ from: "jsonconfig", configUrl: DB_CONFIG_URL }],
       WORKER_URL,
       WASM_URL,
+    );
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("[staticCorpus] db worker init timed out after 20s")),
+        20000,
+      ),
+    );
+    workerPromise = Promise.race([created, timeout]).then(
+      (w) => {
+        console.log("[staticCorpus] db worker ready");
+        return w;
+      },
+      (e) => {
+        console.error("[staticCorpus] db worker init failed:", e);
+        workerPromise = null; // allow retry
+        throw e;
+      },
     );
   }
   return workerPromise;
