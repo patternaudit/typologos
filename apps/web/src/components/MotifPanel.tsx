@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { MotifConfidence, MotifDetail, PassageMotifInstance } from "@typologos/shared";
-import * as api from "../api/client";
+import * as api from "../data";
 
 // Wilson's own grading: abbreviated inline (the footer legend explains it),
 // fuller wording on hover.

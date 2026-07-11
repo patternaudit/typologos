@@ -595,6 +595,13 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   font-weight: 600;
 }
 
+.layer-menu {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+.small-ghost { padding: 5px 12px; font-size: 12px; border-radius: 999px; }
+
 /* ---------- pane action bar (floating, contextual) ---------- */
 
 .pane-actionbar {

@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { nanoid } from "nanoid";
 import { db } from "./db/client.js";
-import { NT_OSIS, OT_OSIS, bookName } from "./corpus/books.js";
+import { bookName } from "./corpus/books.js";
+import { scopeDocumentIds } from "@typologos/shared";
 import type {
   Anchor,
   BookPassage,
@@ -355,43 +356,18 @@ app.get("/api/motifs/:id", (c) => {
 
 // --- overview: whole-scope connection map -----------------------------------
 
-// A scope is an ordered shelf of documents.
+// A scope is an ordered shelf of documents (shared definition; the server
+// upgrades book: labels with the document title).
 function scopeDocs(scope: string): { label: string; ids: string[] } | null {
-  if (scope === "ot") return { label: "Old Testament", ids: OT_OSIS.map((b) => `kjv-${b}`) };
-  if (scope === "nt") return { label: "New Testament", ids: NT_OSIS.map((b) => `kjv-${b}`) };
-  if (scope === "bible") {
-    return {
-      label: "Bible (KJV)",
-      ids: [...OT_OSIS, ...NT_OSIS].map((b) => `kjv-${b}`),
-    };
-  }
-  if (scope === "wars") {
-    return { label: "Wars of the Jews", ids: [1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`) };
-  }
-  if (scope === "antiquities") {
-    return {
-      label: "Antiquities of the Jews",
-      ids: Array.from({ length: 20 }, (_, i) => `jos-Ant-${i + 1}`),
-    };
-  }
-  if (scope === "josephus") {
-    return {
-      label: "Josephus",
-      ids: [
-        ...[1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`),
-        ...Array.from({ length: 20 }, (_, i) => `jos-Ant-${i + 1}`),
-        "jos-Life",
-      ],
-    };
-  }
-  if (scope.startsWith("book:")) {
-    const id = scope.slice(5);
-    const row = db.prepare("SELECT title FROM documents WHERE id = ?").get(id) as
+  const def = scopeDocumentIds(scope);
+  if (def && scope.startsWith("book:")) {
+    const row = db.prepare("SELECT title FROM documents WHERE id = ?").get(def.ids[0]) as
       | Row
       | undefined;
-    return row ? { label: row.title as string, ids: [id] } : null;
+    if (!row) return null;
+    return { label: row.title as string, ids: def.ids };
   }
-  return null;
+  return def;
 }
 
 function inClause(n: number): string {
@@ -574,6 +550,74 @@ app.get("/api/parallels", (c) => {
     updatedAt: r.updated_at as string,
   }));
   return c.json(parallels);
+});
+
+// --- portable layer export/import (Excalidraw-style) -------------------------
+
+app.get("/api/layer", (c) => {
+  const anchors = (db.prepare("SELECT * FROM anchors").all() as Row[]).map(toAnchor);
+  const links = (db.prepare("SELECT * FROM links").all() as Row[]).map(toLink);
+  return c.json({
+    app: "typologos",
+    version: 1,
+    exportedAt: now(),
+    anchors,
+    links,
+  });
+});
+
+app.post("/api/layer", async (c) => {
+  const body = await c.req.json<{
+    app?: string;
+    anchors?: Anchor[];
+    links?: Link[];
+    workspaceId?: string;
+  }>();
+  if (body.app !== "typologos" || !Array.isArray(body.anchors) || !Array.isArray(body.links)) {
+    return c.json({ error: "not a typologos layer file" }, 400);
+  }
+  const workspaceId = body.workspaceId ?? "ws-demo";
+  const haveAnchor = new Set(
+    (db.prepare("SELECT id FROM anchors").all() as Row[]).map((r) => r.id as string),
+  );
+  const haveLink = new Set(
+    (db.prepare("SELECT id FROM links").all() as Row[]).map((r) => r.id as string),
+  );
+  const insertAnchor = db.prepare(
+    `INSERT INTO anchors (id, document_id, segment_id, passage_ref, start_offset, end_offset, selected_text, kind, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertLink = db.prepare(
+    `INSERT INTO links (id, workspace_id, source_anchor_id, target_anchor_id, type, title, rationale, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  let anchorsAdded = 0;
+  let linksAdded = 0;
+  db.exec("BEGIN");
+  try {
+    for (const a of body.anchors) {
+      if (haveAnchor.has(a.id)) continue;
+      insertAnchor.run(
+        a.id, a.documentId, a.segmentId ?? null, a.passageRef ?? "",
+        a.startOffset, a.endOffset, a.selectedText, "text_span",
+        a.createdAt ?? now(), a.updatedAt ?? now(),
+      );
+      anchorsAdded++;
+    }
+    for (const l of body.links) {
+      if (haveLink.has(l.id)) continue;
+      insertLink.run(
+        l.id, workspaceId, l.sourceAnchorId, l.targetAnchorId, l.type,
+        l.title ?? null, l.rationale ?? null, l.createdAt ?? now(), l.updatedAt ?? now(),
+      );
+      linksAdded++;
+    }
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+  return c.json({ anchorsAdded, linksAdded });
 });
 
 app.post("/api/anchors", async (c) => {

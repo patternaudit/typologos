@@ -191,6 +191,57 @@ export interface Parallel {
   updatedAt: string;
 }
 
+// ---- scopes (ordered document shelves) ----
+
+// Canonical protestant divisions; index+1 is canonical order. Shared because
+// both the server API and the in-browser SQLite backend resolve scopes.
+export const OT_OSIS = [
+  "Gen", "Exod", "Lev", "Num", "Deut", "Josh", "Judg", "Ruth", "1Sam", "2Sam",
+  "1Kgs", "2Kgs", "1Chr", "2Chr", "Ezra", "Neh", "Esth", "Job", "Ps", "Prov",
+  "Eccl", "Song", "Isa", "Jer", "Lam", "Ezek", "Dan", "Hos", "Joel", "Amos",
+  "Obad", "Jonah", "Mic", "Nah", "Hab", "Zeph", "Hag", "Zech", "Mal",
+];
+export const NT_OSIS = [
+  "Matt", "Mark", "Luke", "John", "Acts", "Rom", "1Cor", "2Cor", "Gal", "Eph",
+  "Phil", "Col", "1Thess", "2Thess", "1Tim", "2Tim", "Titus", "Phlm", "Heb",
+  "Jas", "1Pet", "2Pet", "1John", "2John", "3John", "Jude", "Rev",
+];
+
+export function scopeDocumentIds(scope: string): { label: string; ids: string[] } | null {
+  if (scope === "ot") return { label: "Old Testament", ids: OT_OSIS.map((b) => `kjv-${b}`) };
+  if (scope === "nt") return { label: "New Testament", ids: NT_OSIS.map((b) => `kjv-${b}`) };
+  if (scope === "bible")
+    return { label: "Bible (KJV)", ids: [...OT_OSIS, ...NT_OSIS].map((b) => `kjv-${b}`) };
+  if (scope === "wars")
+    return { label: "Wars of the Jews", ids: [1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`) };
+  if (scope === "antiquities")
+    return {
+      label: "Antiquities of the Jews",
+      ids: Array.from({ length: 20 }, (_, i) => `jos-Ant-${i + 1}`),
+    };
+  if (scope === "josephus")
+    return {
+      label: "Josephus",
+      ids: [
+        ...[1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`),
+        ...Array.from({ length: 20 }, (_, i) => `jos-Ant-${i + 1}`),
+        "jos-Life",
+      ],
+    };
+  if (scope.startsWith("book:")) return { label: scope.slice(5), ids: [scope.slice(5)] };
+  return null;
+}
+
+// ---- layer export (Excalidraw-style portable user layer) ----
+
+export interface LayerExport {
+  app: "typologos";
+  version: 1;
+  exportedAt: string;
+  anchors: Anchor[];
+  links: Link[];
+}
+
 // ---- overview (whole-scope connection map) ----
 
 // A scope is an ordered shelf of documents: "bible", "ot", "nt", "josephus",

@@ -14,7 +14,8 @@
     "josephus:download": "curl -fsSL -o data/josephus-wars.txt https://www.gutenberg.org/cache/epub/2850/pg2850.txt && curl -fsSL -o data/josephus-life.txt https://www.gutenberg.org/cache/epub/2846/pg2846.txt && curl -fsSL -o data/josephus-antiquities.txt https://www.gutenberg.org/cache/epub/2848/pg2848.txt",
     "josephus:import": "tsx src/corpus/josephus.ts",
     "atwill:import": "tsx src/corpus/atwill.ts",
-    "mason:import": "tsx src/corpus/mason.ts"
+    "mason:import": "tsx src/corpus/mason.ts",
+    "db:publish": "tsx src/db/publish.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

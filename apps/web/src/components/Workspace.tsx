@@ -9,7 +9,7 @@ import type {
   PassageMotifInstance,
   RelationshipType,
 } from "@typologos/shared";
-import * as api from "../api/client";
+import * as api from "../data";
 import { useAnchorRects } from "../hooks/useAnchorRects";
 import type { Block, PaneData, PaneView, PendingSelection } from "../viewTypes";
 import { PassagePane } from "./PassagePane";
@@ -89,6 +89,8 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
 
   const mainRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importNote, setImportNote] = useState<string | null>(null);
   const viewsKey = `typologos:views:${workspaceId}`;
   const bumpLayout = useCallback(() => setVersion((v) => v + 1), []);
 
@@ -124,7 +126,13 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     if (!data || (views.left && views.right)) return;
     const leftPane = data.panes.find((p) => p.side === "left");
     const rightPane = data.panes.find((p) => p.side === "right");
-    if (!leftPane || !rightPane) return;
+    // Local-first mode has no seeded document panes; fall back to books.
+    const leftDefault: PaneView = leftPane
+      ? { mode: "document", documentId: leftPane.document.id }
+      : { mode: "book", bookId: "kjv-Gen" };
+    const rightDefault: PaneView = rightPane
+      ? { mode: "document", documentId: rightPane.document.id }
+      : { mode: "book", bookId: "kjv-John" };
 
     let savedLeft: PaneView | null = null;
     let savedRight: PaneView | null = null;
@@ -156,10 +164,8 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     const qLeft = fromParam(params.get("left"));
     const qRight = fromParam(params.get("right"));
     setViews({
-      left:
-        qLeft?.view ?? savedLeft ?? { mode: "document", documentId: leftPane.document.id },
-      right:
-        qRight?.view ?? savedRight ?? { mode: "document", documentId: rightPane.document.id },
+      left: qLeft?.view ?? savedLeft ?? leftDefault,
+      right: qRight?.view ?? savedRight ?? rightDefault,
     });
     if (qLeft?.target || qRight?.target) {
       setScrollTargets({ left: qLeft?.target ?? null, right: qRight?.target ?? null });
@@ -717,7 +723,53 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             Overview
           </button>
         </nav>
+        <div className="layer-menu">
+          <button
+            className="ghost small-ghost"
+            title="Download your anchors and links as a portable .json file"
+            onClick={() =>
+              api.exportLayerToFile().catch((e) => setError(e instanceof Error ? e.message : String(e)))
+            }
+          >
+            Export layer
+          </button>
+          <button
+            className="ghost small-ghost"
+            title="Import a Typologos layer file (merges; duplicates skipped)"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Import layer
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: "none" }}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              try {
+                const res = await api.importLayerFromFile(file);
+                setError(null);
+                setImportNote(`Imported ${res.linksAdded} links and ${res.anchorsAdded} anchors`);
+                await Promise.all([
+                  reload(),
+                  fetchSide("left", views.left),
+                  fetchSide("right", views.right),
+                ]);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : String(err));
+              }
+            }}
+          />
+        </div>
       </header>
+      {importNote && (
+        <div className="ov-loaded-note" style={{ top: 64 }} onClick={() => setImportNote(null)}>
+          {importNote}
+        </div>
+      )}
 
       <div className="workspace-main" ref={mainRef}>
         {startOpen && <StartScreen onClose={() => setStartOpen(false)} />}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { OverviewConnection, OverviewStructure } from "@typologos/shared";
-import * as api from "../api/client";
+import * as api from "../data";
 
 // Whole-scope connection map: two vertical strips (one scope each), every
 // connection between them drawn as an arc. Books stack proportionally to

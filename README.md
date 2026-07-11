@@ -8,6 +8,36 @@ This is the MVP: one seeded workspace (Genesis 22 ↔ John 3), text-span anchors
 typed links, an SVG connector overlay, and a click-to-inspect side panel — all
 persisted in SQLite.
 
+## Two ways to run
+
+**API mode** (default, dev): the Hono server owns everything — corpus reads
+and your anchors/links — in one local SQLite file.
+
+**Static mode** (publishable): no server at all. The corpus ships as a
+statically hosted SQLite file queried **in the browser** (sql.js-httpvfs —
+WASM SQLite over HTTP range requests, fetching only the ~4KB pages each query
+touches), and your anchors/links live in **IndexedDB**, local-first. Both
+sides sit behind a persistence-adapter pair (`apps/web/src/data/`:
+`CorpusSource` + `UserLayerStore`), so future backends slot in without
+touching the UI.
+
+```bash
+npm run db:publish -w @typologos/server   # build the PUBLIC db (Wilson prose + user data stripped)
+npm run dev:static -w @typologos/web      # static mode on :3002
+npm run build:static -w @typologos/web    # production bundle (deploy dist/ + public/ anywhere static)
+```
+
+**Portable layers**: *Export layer* downloads your anchors + links as a
+`typologos-layer-*.json` file (Excalidraw-style); *Import layer* merges
+someone else's file into your store (duplicates skipped). Works in both
+modes.
+
+The public database strips Wilson's rationale prose (his 1957 text is likely
+still under copyright — headwords/refs/grades are facts and remain, so
+underlines, arcs, and the overview all work; the drawer loses his
+commentary). `--keep-rationales` builds a full personal copy — don't publish
+that one.
+
 ## Stack
 
 - **Web:** React + Vite + TypeScript. Plain offset-based passage renderer (anchors
