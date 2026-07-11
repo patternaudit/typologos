@@ -282,24 +282,30 @@ export function Overview({
           ))}
         </span>
 
-        <span className="ov-group">
-          <span
-            className="ov-group-label"
-            title="Wilson arcs only: hide chapter pairs sharing fewer symbols than this"
-          >
-            Min shared symbols
-          </span>
-          <select value={minWeight} onChange={(e) => setMinWeight(Number(e.target.value))}>
-            <option value={1}>1</option>
-            <option value={2}>2</option>
-            <option value={3}>3</option>
-          </select>
-          {layersOn["wilson"] && wilsonShown < wilsonTotal && (
-            <span className="ov-note">
-              {wilsonShown} of {wilsonTotal} shown
+        {wilsonTotal > 0 && (
+          <span className="ov-group">
+            <span
+              className="ov-group-label"
+              title="Applies to the amber Wilson arcs only: an arc's weight is how many of Wilson's symbols (Lamb, Fire, …) the two chapters share. Raise to keep only the strongest overlaps."
+            >
+              Motif overlap ≥
             </span>
-          )}
-        </span>
+            <select
+              value={minWeight}
+              disabled={!layersOn["wilson"]}
+              onChange={(e) => setMinWeight(Number(e.target.value))}
+            >
+              <option value={1}>1 symbol</option>
+              <option value={2}>2 symbols</option>
+              <option value={3}>3 symbols</option>
+            </select>
+            {layersOn["wilson"] && (
+              <span className="ov-note">
+                {wilsonShown} of {wilsonTotal} arcs
+              </span>
+            )}
+          </span>
+        )}
 
         <button className="ghost" onClick={onClose}>
           ✕ Close
