@@ -13,6 +13,7 @@ export interface MotifArc {
   leftRef: string; // e.g. "Exodus 3:2"
   rightRef: string;
   parallelId?: string; // set for kind === "parallel"
+  source?: string; // parallel provenance, for styling
 }
 
 interface MotifArcOverlayProps {
@@ -59,7 +60,13 @@ export function MotifArcOverlay({ arcs, onArcClick }: MotifArcOverlayProps) {
               />
               <path
                 d={d}
-                className={arc.kind === "parallel" ? "parallel-arc" : "motif-arc"}
+                className={
+                  arc.kind === "parallel"
+                    ? arc.source === "mason-dependence"
+                      ? "parallel-arc parallel-arc-mason"
+                      : "parallel-arc"
+                    : "motif-arc"
+                }
                 strokeWidth={hovered ? width + 1 : width}
                 strokeDasharray={arc.kind === "parallel" ? "2 4" : "6 5"}
                 opacity={hovered ? 0.95 : arc.kind === "parallel" ? 0.55 : 0.4}

@@ -4,16 +4,17 @@ import * as api from "../api/client";
 
 // Whole-scope connection map: two vertical strips (one scope each), every
 // connection between them drawn as an arc. Books stack proportionally to
-// verse count; chapters are bands inside books. This is the "see the whole
-// structure at once" view — click an arc to drop into the reading panes at
-// that chapter pair.
+// verse count; chapters are bands inside books. Click an arc to drop into the
+// reading panes at that chapter pair; click a book band to load that book on
+// that side.
 
 const SCOPES: { id: string; label: string }[] = [
   { id: "bible", label: "Bible (KJV)" },
   { id: "ot", label: "Old Testament" },
   { id: "nt", label: "New Testament" },
-  { id: "josephus", label: "Josephus" },
+  { id: "josephus", label: "Josephus (all)" },
   { id: "wars", label: "Wars of the Jews" },
+  { id: "antiquities", label: "Antiquities" },
 ];
 
 const W = 1440;
@@ -24,11 +25,48 @@ const STRIP_W = 30;
 const LEFT_X = 210;
 const RIGHT_X = W - 210 - STRIP_W;
 
-const KIND_COLOR: Record<OverviewConnection["kind"], string> = {
-  wilson: "#b8742a",
-  parallel: "#4a6b8a",
-  link: "#3a8a5f",
-};
+// One toggleable data layer in the map.
+interface LayerDef {
+  id: string; // matches connection kind or parallel source
+  label: string;
+  color: string;
+  hint: string;
+  dash?: string;
+  match: (c: OverviewConnection) => boolean;
+}
+
+const LAYERS: LayerDef[] = [
+  {
+    id: "wilson",
+    label: "Wilson motifs",
+    color: "#b8742a",
+    hint: "Chapters sharing a symbol from Wilson's Dictionary of Bible Types (Lamb, Fire, …). Arc weight = how many symbols the two chapters share.",
+    match: (c) => c.kind === "wilson",
+  },
+  {
+    id: "atwill-cm",
+    label: "Atwill parallels",
+    color: "#4a6b8a",
+    dash: "3 3",
+    hint: "The 34-step Flavian Signature sequence from Caesar's Messiah (NT ↔ Josephus), with textual-check verdicts.",
+    match: (c) => c.kind === "parallel" && c.source === "atwill-cm",
+  },
+  {
+    id: "mason-dependence",
+    label: "Mason dependence",
+    color: "#7d5a86",
+    dash: "3 3",
+    hint: "Touchpoints for the mainstream 'Luke used Josephus' source hypothesis (Theudas, the census, the Egyptian, …).",
+    match: (c) => c.kind === "parallel" && c.source === "mason-dependence",
+  },
+  {
+    id: "link",
+    label: "My links",
+    color: "#3a8a5f",
+    hint: "Links you created by hand between anchored passages.",
+    match: (c) => c.kind === "link",
+  },
+];
 
 interface ChapterPos {
   y: number; // center y
@@ -38,8 +76,7 @@ interface ChapterPos {
 }
 
 interface StripLayout {
-  // key: documentId|chapter -> position
-  chapters: Map<string, ChapterPos>;
+  chapters: Map<string, ChapterPos>; // documentId|chapter -> position
   books: { y: number; h: number; title: string; documentId: string; index: number }[];
 }
 
@@ -84,17 +121,30 @@ interface OverviewProps {
     rightDoc: string,
     rightChapter: number,
   ) => void;
+  // Load one book into the given reading pane (overview stays open).
+  onLoadBook: (side: "left" | "right", documentId: string) => void;
 }
 
-export function Overview({ initialLeft, initialRight, onClose, onOpenPair }: OverviewProps) {
+export function Overview({
+  initialLeft,
+  initialRight,
+  onClose,
+  onOpenPair,
+  onLoadBook,
+}: OverviewProps) {
   const [leftScope, setLeftScope] = useState(initialLeft ?? "ot");
   const [rightScope, setRightScope] = useState(initialRight ?? "nt");
   const [left, setLeft] = useState<OverviewStructure | null>(null);
   const [right, setRight] = useState<OverviewStructure | null>(null);
   const [connections, setConnections] = useState<OverviewConnection[]>([]);
   const [minWeight, setMinWeight] = useState(2);
-  const [layers, setLayers] = useState({ wilson: true, parallel: true, link: true });
-  const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [layersOn, setLayersOn] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(LAYERS.map((l) => [l.id, true])),
+  );
+  const [tip, setTip] = useState<{ x: number; y: number; text: string; hint?: string } | null>(
+    null,
+  );
+  const [loadedNote, setLoadedNote] = useState<string | null>(null);
 
   useEffect(() => {
     let stale = false;
@@ -118,22 +168,23 @@ export function Overview({ initialLeft, initialRight, onClose, onOpenPair }: Ove
   const leftLayout = useMemo(() => (left ? layoutStrip(left) : null), [left]);
   const rightLayout = useMemo(() => (right ? layoutStrip(right) : null), [right]);
 
+  const layerOf = (c: OverviewConnection): LayerDef | undefined => LAYERS.find((l) => l.match(c));
+
   const visible = useMemo(() => {
     if (!leftLayout || !rightLayout) return [];
     return connections.filter((c) => {
-      if (!layers[c.kind]) return false;
+      const layer = layerOf(c);
+      if (!layer || !layersOn[layer.id]) return false;
       if (c.kind === "wilson" && c.weight < minWeight) return false;
       return (
         leftLayout.chapters.has(`${c.leftDocumentId}|${c.leftChapter}`) &&
         rightLayout.chapters.has(`${c.rightDocumentId}|${c.rightChapter}`)
       );
     });
-  }, [connections, layers, minWeight, leftLayout, rightLayout]);
+  }, [connections, layersOn, minWeight, leftLayout, rightLayout]);
 
   const wilsonShown = visible.filter((c) => c.kind === "wilson").length;
-  const wilsonTotal = connections.filter(
-    (c) => c.kind === "wilson" && layers.wilson,
-  ).length;
+  const wilsonTotal = connections.filter((c) => c.kind === "wilson").length;
 
   const arcPath = (c: OverviewConnection): string => {
     const a = leftLayout!.chapters.get(`${c.leftDocumentId}|${c.leftChapter}`)!;
@@ -150,7 +201,12 @@ export function Overview({ initialLeft, initialRight, onClose, onOpenPair }: Ove
     return `${a.title} ↔ ${b.title} — ${c.label}`;
   };
 
-  const renderStrip = (layout: StripLayout, x: number, labelSide: "left" | "right") => (
+  const renderStrip = (
+    layout: StripLayout,
+    x: number,
+    labelSide: "left" | "right",
+    paneSide: "left" | "right",
+  ) => (
     <g>
       {layout.books.map((b) => (
         <g key={b.documentId}>
@@ -160,9 +216,21 @@ export function Overview({ initialLeft, initialRight, onClose, onOpenPair }: Ove
             width={STRIP_W}
             height={Math.max(b.h, 0.5)}
             className={`ov-book ${b.index % 2 ? "ov-book-alt" : ""}`}
-          >
-            <title>{b.title}</title>
-          </rect>
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              onLoadBook(paneSide, b.documentId);
+              setLoadedNote(`${b.title} loaded in the ${paneSide} pane — switch to Reading view`);
+            }}
+            onMouseEnter={(e) =>
+              setTip({
+                x: e.clientX,
+                y: e.clientY,
+                text: b.title,
+                hint: `click to load in the ${paneSide} pane`,
+              })
+            }
+            onMouseLeave={() => setTip(null)}
+          />
           {b.h > 11 && (
             <text
               x={labelSide === "left" ? x - 6 : x + STRIP_W + 6}
@@ -181,72 +249,75 @@ export function Overview({ initialLeft, initialRight, onClose, onOpenPair }: Ove
   return (
     <div className="overview">
       <div className="overview-bar">
-        <select value={leftScope} onChange={(e) => setLeftScope(e.target.value)}>
-          {SCOPES.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-        <span className="overview-vs">↔</span>
-        <select value={rightScope} onChange={(e) => setRightScope(e.target.value)}>
-          {SCOPES.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+        <span className="ov-group">
+          <span className="ov-group-label">Compare</span>
+          <select value={leftScope} onChange={(e) => setLeftScope(e.target.value)}>
+            {SCOPES.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <span className="overview-vs">↔</span>
+          <select value={rightScope} onChange={(e) => setRightScope(e.target.value)}>
+            {SCOPES.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </span>
 
-        <span className="overview-controls">
-          <label className="ov-layer" style={{ color: KIND_COLOR.wilson }}>
-            <input
-              type="checkbox"
-              checked={layers.wilson}
-              onChange={(e) => setLayers({ ...layers, wilson: e.target.checked })}
-            />
-            Wilson motifs
-          </label>
-          <label className="ov-layer" style={{ color: KIND_COLOR.parallel }}>
-            <input
-              type="checkbox"
-              checked={layers.parallel}
-              onChange={(e) => setLayers({ ...layers, parallel: e.target.checked })}
-            />
-            Parallels
-          </label>
-          <label className="ov-layer" style={{ color: KIND_COLOR.link }}>
-            <input
-              type="checkbox"
-              checked={layers.link}
-              onChange={(e) => setLayers({ ...layers, link: e.target.checked })}
-            />
-            My links
-          </label>
-          <label className="ov-layer">
-            shared motifs ≥
-            <select value={minWeight} onChange={(e) => setMinWeight(Number(e.target.value))}>
-              <option value={1}>1</option>
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-            </select>
-          </label>
-          {layers.wilson && wilsonShown < wilsonTotal && (
+        <span className="ov-group">
+          <span className="ov-group-label">Layers</span>
+          {LAYERS.map((l) => (
+            <label key={l.id} className="ov-layer" style={{ color: l.color }} title={l.hint}>
+              <input
+                type="checkbox"
+                checked={layersOn[l.id]}
+                onChange={(e) => setLayersOn({ ...layersOn, [l.id]: e.target.checked })}
+              />
+              {l.label}
+            </label>
+          ))}
+        </span>
+
+        <span className="ov-group">
+          <span
+            className="ov-group-label"
+            title="Wilson arcs only: hide chapter pairs sharing fewer symbols than this"
+          >
+            Min shared symbols
+          </span>
+          <select value={minWeight} onChange={(e) => setMinWeight(Number(e.target.value))}>
+            <option value={1}>1</option>
+            <option value={2}>2</option>
+            <option value={3}>3</option>
+          </select>
+          {layersOn["wilson"] && wilsonShown < wilsonTotal && (
             <span className="ov-note">
-              {wilsonShown} of {wilsonTotal} motif pairs shown
+              {wilsonShown} of {wilsonTotal} shown
             </span>
           )}
         </span>
 
         <button className="ghost" onClick={onClose}>
-          ✕ Close overview
+          ✕ Close
         </button>
       </div>
+
+      {loadedNote && (
+        <div className="ov-loaded-note" onClick={() => setLoadedNote(null)}>
+          {loadedNote}
+        </div>
+      )}
 
       <div className="overview-canvas">
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
           {leftLayout && rightLayout && (
             <>
               {visible.map((c, i) => {
+                const layer = layerOf(c)!;
                 const strong = c.kind !== "wilson" || c.weight >= 2;
                 return (
                   <g key={i}>
@@ -257,8 +328,12 @@ export function Overview({ initialLeft, initialRight, onClose, onOpenPair }: Ove
                         strokeWidth={8}
                         fill="none"
                         style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                        onMouseEnter={(e) => setTip({ x: e.clientX, y: e.clientY, text: tipFor(c) })}
-                        onMouseMove={(e) => setTip({ x: e.clientX, y: e.clientY, text: tipFor(c) })}
+                        onMouseEnter={(e) =>
+                          setTip({ x: e.clientX, y: e.clientY, text: tipFor(c), hint: "click to open this pair" })
+                        }
+                        onMouseMove={(e) =>
+                          setTip({ x: e.clientX, y: e.clientY, text: tipFor(c), hint: "click to open this pair" })
+                        }
                         onMouseLeave={() => setTip(null)}
                         onClick={() =>
                           onOpenPair(c.leftDocumentId, c.leftChapter, c.rightDocumentId, c.rightChapter)
@@ -267,9 +342,9 @@ export function Overview({ initialLeft, initialRight, onClose, onOpenPair }: Ove
                     )}
                     <path
                       d={arcPath(c)}
-                      stroke={KIND_COLOR[c.kind]}
+                      stroke={layer.color}
                       strokeWidth={c.kind === "wilson" ? Math.min(0.6 + c.weight * 0.5, 2.6) : 1.6}
-                      strokeDasharray={c.kind === "parallel" ? "3 3" : undefined}
+                      strokeDasharray={layer.dash}
                       fill="none"
                       opacity={c.kind === "wilson" ? Math.min(0.12 + c.weight * 0.14, 0.65) : 0.75}
                       style={{ pointerEvents: "none" }}
@@ -277,20 +352,20 @@ export function Overview({ initialLeft, initialRight, onClose, onOpenPair }: Ove
                   </g>
                 );
               })}
-              {renderStrip(leftLayout, LEFT_X, "left")}
-              {renderStrip(rightLayout, RIGHT_X, "right")}
+              {renderStrip(leftLayout, LEFT_X, "left", "left")}
+              {renderStrip(rightLayout, RIGHT_X, "right", "right")}
             </>
           )}
         </svg>
         {tip && (
           <div
             className="motif-tooltip"
-            style={{ left: Math.min(tip.x + 14, window.innerWidth - 260), top: tip.y + 16 }}
+            style={{ left: Math.min(tip.x + 14, window.innerWidth - 280), top: tip.y + 16 }}
           >
             <div className="motif-tooltip-row">
               <span className="motif-tooltip-grade">{tip.text}</span>
             </div>
-            <div className="motif-tooltip-hint">click to open this pair</div>
+            {tip.hint && <div className="motif-tooltip-hint">{tip.hint}</div>}
           </div>
         )}
       </div>

@@ -19,7 +19,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA = join(__dirname, "..", "..", "data");
 const NOW = new Date().toISOString();
 
-const ROMAN: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7 };
+const ROMAN: Record<string, number> = {
+  I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10,
+  XI: 11, XII: 12, XIII: 13, XIV: 14, XV: 15, XVI: 16, XVII: 17, XVIII: 18,
+  XIX: 19, XX: 20,
+};
+const ROMANS = Object.keys(ROMAN);
 
 interface Section {
   book: number; // 1..7 for Wars; 1 for Life
@@ -43,7 +48,15 @@ function stripGutenberg(raw: string): string {
 
 function parseWars(raw: string): Section[] {
   const text = stripGutenberg(raw);
-  const lines = text.split(/\r?\n/);
+  let lines = text.split(/\r?\n/);
+  // Skip the table of contents: it repeats the BOOK/CHAPTER headings (with
+  // numbered chapter summaries in Antiquities). The body starts at the
+  // second "BOOK I." heading when one exists.
+  const bookOneAt = lines.reduce<number[]>((acc, l, i) => {
+    if (/^BOOK I\.(\s|$)/.test(l)) acc.push(i);
+    return acc;
+  }, []);
+  if (bookOneAt.length > 1) lines = lines.slice(bookOneAt[1]);
   const sections: Section[] = [];
   let book = 0;
   let chapter = 0;
@@ -59,14 +72,17 @@ function parseWars(raw: string): Section[] {
 
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li];
-    const bookM = line.match(/^BOOK ([IVX]+)\.\s*$/);
+    // Wars: bare "BOOK I." / "CHAPTER 1." headings. Antiquities: same tokens
+    // with the chapter title trailing on the line (also repeated in a TOC,
+    // which is harmless — TOC entries carry no section paragraphs).
+    const bookM = line.match(/^BOOK ([IVX]+)\.(\s|$)/);
     if (bookM && ROMAN[bookM[1]]) {
       flush();
       book = ROMAN[bookM[1]];
       chapter = 0;
       continue;
     }
-    const chapM = line.match(/^CHAPTER (\d+)\.\s*$/);
+    const chapM = line.match(/^CHAPTER (\d+)\.(\s|$)/);
     if (chapM && book > 0) {
       flush();
       chapter = Number(chapM[1]);
@@ -91,12 +107,23 @@ function parseWars(raw: string): Section[] {
         continue;
       }
       if (!isFootnotey && n === 1 && current && current.section >= 2) {
-        // Probable missing chapter heading; require a sequential "2." ahead
-        // before the next chapter/book marker to rule out list noise.
+        // Probable missing chapter heading. Two guards against list noise:
+        // a sequential "2." must follow before the next heading, and the next
+        // real CHAPTER heading must NOT be chapter+1 (if it is, this heading
+        // isn't missing — the restart is an in-text enumeration).
         const ahead = lines.slice(li + 1, li + 80);
         const twoAt = ahead.findIndex((l) => /^2\.\s+\S/.test(l));
         const breakAt = ahead.findIndex((l) => /^(CHAPTER|BOOK) /.test(l));
-        if (twoAt !== -1 && (breakAt === -1 || twoAt < breakAt)) {
+        let nextHeadingIsSequential = false;
+        for (let lj = li + 1; lj < lines.length; lj++) {
+          const hm = lines[lj].match(/^CHAPTER (\d+)\.(\s|$)/);
+          if (hm) {
+            nextHeadingIsSequential = Number(hm[1]) === chapter + 1;
+            break;
+          }
+          if (/^BOOK [IVX]+\.(\s|$)/.test(lines[lj])) break;
+        }
+        if (twoAt !== -1 && (breakAt === -1 || twoAt < breakAt) && !nextHeadingIsSequential) {
           flush();
           chapter += 1;
           current = { book, chapter, section: 1, text: secM[2] };
@@ -193,31 +220,43 @@ function importDocument(
 function run() {
   const warsPath = join(DATA, "josephus-wars.txt");
   const lifePath = join(DATA, "josephus-life.txt");
-  if (!fs.existsSync(warsPath) || !fs.existsSync(lifePath)) {
+  const antPath = join(DATA, "josephus-antiquities.txt");
+  if (!fs.existsSync(warsPath) || !fs.existsSync(lifePath) || !fs.existsSync(antPath)) {
     console.error("[josephus] missing source texts; download first:");
     console.error("  curl -fsSL -o apps/server/data/josephus-wars.txt https://www.gutenberg.org/cache/epub/2850/pg2850.txt");
     console.error("  curl -fsSL -o apps/server/data/josephus-life.txt https://www.gutenberg.org/cache/epub/2846/pg2846.txt");
+    console.error("  curl -fsSL -o apps/server/data/josephus-antiquities.txt https://www.gutenberg.org/cache/epub/2848/pg2848.txt");
     process.exit(1);
   }
 
   const wars = parseWars(fs.readFileSync(warsPath, "utf-8"));
   const life = parseLife(fs.readFileSync(lifePath, "utf-8"));
-  console.log(`[josephus] parsed Wars: ${wars.length} sections; Life: ${life.length} sections`);
+  const ant = parseWars(fs.readFileSync(antPath, "utf-8"));
+  console.log(
+    `[josephus] parsed Wars: ${wars.length} sections; Life: ${life.length}; Antiquities: ${ant.length}`,
+  );
 
   db.exec("BEGIN");
   try {
     db.prepare("DELETE FROM segments WHERE document_id LIKE 'jos-%'").run();
     db.prepare("DELETE FROM documents WHERE id LIKE 'jos-%'").run();
 
-    const romans = ["I", "II", "III", "IV", "V", "VI", "VII"];
     for (let b = 1; b <= 7; b++) {
-      const bookSections = wars.filter((s) => s.book === b);
       importDocument(
         `jos-War-${b}`,
-        `Wars of the Jews ${romans[b - 1]}`,
-        `Wars of the Jews, Book ${romans[b - 1]} (Whiston)`,
-        bookSections,
+        `Wars of the Jews ${ROMANS[b - 1]}`,
+        `Wars of the Jews, Book ${ROMANS[b - 1]} (Whiston)`,
+        wars.filter((s) => s.book === b),
         (s) => `Wars ${b}.${s.chapter}.${s.section}`,
+      );
+    }
+    for (let b = 1; b <= 20; b++) {
+      importDocument(
+        `jos-Ant-${b}`,
+        `Antiquities ${ROMANS[b - 1]}`,
+        `Antiquities of the Jews, Book ${ROMANS[b - 1]} (Whiston)`,
+        ant.filter((s) => s.book === b),
+        (s) => `Ant ${b}.${s.chapter}.${s.section}`,
       );
     }
     importDocument(
@@ -238,7 +277,7 @@ function run() {
       c: number;
     }
   ).c;
-  console.log(`[josephus] imported 8 documents, ${segCount} segments`);
+  console.log(`[josephus] imported 28 documents, ${segCount} segments`);
 }
 
 run();

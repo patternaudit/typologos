@@ -57,8 +57,18 @@ export function ParallelInspector({ parallel, onClose, onOpenPair }: ParallelIns
       </div>
 
       <p className="motif-panel-note">
-        From Joseph Atwill, <em>Caesar's Messiah</em> (Flavian Signature Edition), ch. 5.
-        Verification checks the cited texts only — not the authorship thesis.
+        {parallel.source === "mason-dependence" ? (
+          <>
+            From the "Luke used Josephus" source hypothesis (Krenkel 1894; Mason 1992;
+            Pervo 2006). Verification checks the cited texts only — not the dependence
+            conclusion.
+          </>
+        ) : (
+          <>
+            From Joseph Atwill, <em>Caesar's Messiah</em> (Flavian Signature Edition), ch. 5.
+            Verification checks the cited texts only — not the authorship thesis.
+          </>
+        )}
       </p>
     </aside>
   );

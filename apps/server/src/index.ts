@@ -368,10 +368,20 @@ function scopeDocs(scope: string): { label: string; ids: string[] } | null {
   if (scope === "wars") {
     return { label: "Wars of the Jews", ids: [1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`) };
   }
+  if (scope === "antiquities") {
+    return {
+      label: "Antiquities of the Jews",
+      ids: Array.from({ length: 20 }, (_, i) => `jos-Ant-${i + 1}`),
+    };
+  }
   if (scope === "josephus") {
     return {
       label: "Josephus",
-      ids: [...[1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`), "jos-Life"],
+      ids: [
+        ...[1, 2, 3, 4, 5, 6, 7].map((n) => `jos-War-${n}`),
+        ...Array.from({ length: 20 }, (_, i) => `jos-Ant-${i + 1}`),
+        "jos-Life",
+      ],
     };
   }
   if (scope.startsWith("book:")) {
@@ -442,6 +452,7 @@ app.get("/api/overview/connections", (c) => {
 
   const connections: {
     kind: "wilson" | "parallel" | "link";
+    source?: string;
     leftDocumentId: string;
     leftChapter: number;
     rightDocumentId: string;
@@ -481,7 +492,7 @@ app.get("/api/overview/connections", (c) => {
   // Claimed parallels (both orientations against the chosen scopes).
   const parRows = db
     .prepare(
-      `SELECT p.title, ls.document_id ld, ls.chapter lc, rs.document_id rd, rs.chapter rc
+      `SELECT p.title, p.source, ls.document_id ld, ls.chapter lc, rs.document_id rd, rs.chapter rc
        FROM parallels p
        JOIN segments ls ON ls.id = p.left_segment_id
        JOIN segments rs ON rs.id = p.right_segment_id`,
@@ -496,6 +507,7 @@ app.get("/api/overview/connections", (c) => {
     for (const [a, ac, b, bc] of orientations) {
       connections.push({
         kind: "parallel",
+        source: r.source as string,
         leftDocumentId: a,
         leftChapter: ac,
         rightDocumentId: b,

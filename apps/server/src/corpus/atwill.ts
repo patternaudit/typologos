@@ -119,6 +119,11 @@ function resolveWarSection(
 function run() {
   const raw = fs.readFileSync(join(__dirname, "atwill-parallels.json"), "utf-8");
   const parallels = JSON.parse(raw) as Parallel[];
+  // Verification verdicts live in a committed file so re-imports never lose
+  // them (learned the hard way).
+  const verdicts = JSON.parse(
+    fs.readFileSync(join(__dirname, "atwill-verdicts.json"), "utf-8"),
+  ) as Record<string, { verdict: string; verification: string }>;
 
   const segExists = db.prepare("SELECT id FROM segments WHERE id = ? AND kind = 'verse'");
   const insert = db.prepare(
@@ -174,6 +179,7 @@ function run() {
         if (!resolved || resolved.score < 0.5) lowConfidence++;
       }
 
+      const v = verdicts[String(p.n)];
       insert.run(
         `par-atwill-${p.n}`,
         SOURCE,
@@ -187,8 +193,8 @@ function run() {
         rightSeg,
         rightRef,
         jos.quote || null,
-        resolutionNote,
-        "unchecked",
+        v ? `${resolutionNote} | ${v.verification}` : resolutionNote,
+        v?.verdict ?? "unchecked",
         p.n,
         NOW,
         NOW,

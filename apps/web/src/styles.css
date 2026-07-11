@@ -279,12 +279,13 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   fill: none;
   transition: opacity 120ms ease, stroke-width 120ms ease;
 }
-/* Claimed parallels (e.g. Atwill): a cooler voice than Wilson's amber. */
+/* Claimed parallels: cooler voices than Wilson's amber. */
 .parallel-arc {
-  stroke: #4a6b8a;
+  stroke: #4a6b8a; /* Atwill */
   fill: none;
   transition: opacity 120ms ease, stroke-width 120ms ease;
 }
+.parallel-arc-mason { stroke: #7d5a86; }
 
 /* ---------- link builder (footer) ---------- */
 
@@ -612,6 +613,37 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 }
 .ov-note { color: var(--ink-faint); font-style: italic; }
 .overview-bar > button { margin-left: auto; }
+
+.ov-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-right: 1px solid var(--panel-edge);
+}
+.ov-group:first-child { padding-left: 0; }
+.ov-group-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  cursor: default;
+}
+.ov-loaded-note {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  background: var(--panel);
+  border: 1px solid var(--highlight-strong);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
 
 .overview-canvas {
   flex: 1;

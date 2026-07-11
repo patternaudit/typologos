@@ -279,7 +279,8 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     // Presence in rects.blocks already implies near-visibility.
     for (const p of parallels) {
       if (!p.leftSegmentId || !p.rightSegmentId) continue;
-      const label = [p.title, `Atwill #${p.position} · ${p.verdict}`];
+      const sourceName = p.source === "mason-dependence" ? "Mason" : "Atwill";
+      const label = [p.title, `${sourceName} #${p.position} · ${p.verdict}`];
       const pairs = [
         { key: `par|${p.id}|lr`, a: p.leftSegmentId, aRef: p.leftRef, b: p.rightSegmentId, bRef: p.rightRef },
         { key: `par|${p.id}|rl`, a: p.rightSegmentId, aRef: p.rightRef, b: p.leftSegmentId, bRef: p.leftRef },
@@ -291,12 +292,14 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
         byPair.set(key, {
           key,
           kind: "parallel",
+          source: p.source,
           from,
           to,
           headwords: label,
           leftSegmentId: a,
           leftRef: aRef,
           rightRef: bRef,
+          parallelId: p.id,
         });
       }
     }
@@ -678,6 +681,9 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             initialRight={new URLSearchParams(window.location.search).get("b") ?? undefined}
             onClose={() => setOverviewOpen(false)}
             onOpenPair={openOverviewPair}
+            onLoadBook={(side, documentId) =>
+              setViews((v) => ({ ...v, [side]: { mode: "book", bookId: documentId } }))
+            }
           />
         )}
         <div className="panes">

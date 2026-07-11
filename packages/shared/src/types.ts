@@ -218,6 +218,7 @@ export interface OverviewStructure {
 // One chapter-pair connection between the two scopes, aggregated.
 export interface OverviewConnection {
   kind: "wilson" | "parallel" | "link";
+  source?: string; // provenance for parallels (e.g. "atwill-cm", "mason-dependence")
   leftDocumentId: string;
   leftChapter: number;
   rightDocumentId: string;
