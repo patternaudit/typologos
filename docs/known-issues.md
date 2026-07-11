@@ -7,18 +7,17 @@ and the night log; this doc is about the *data*.
 
 ## Atwill layer (`parallels`, source `atwill-cm`)
 
-### #34 — wrong endpoints for "Simon condemned and John spared"
-**Issue.** The row anchors Luke 4:23 ↔ Wars 3.7.31 because chapter 5's coda
-interleaves two arguments, and the parser grabbed the first citations in the
-section: Atwill's closing decode of the Nazareth brow-of-the-hill episode
-(Luke 4:29–30 ↔ the Japha/Jotapata fighting, Wars 3.7). The actual
-Simon/John claim rests on **Wars 7.5.6** — at the Flavian triumph Simon bar
-Giora is executed and John of Gischala imprisoned for life.
-**Impact.** The deep link opens a real Atwill argument, but not the titular
-one; verdict held at *partial* until fixed.
-**Fix.** Split into two rows (34a Nazareth-brow decode; 34b Simon/John at
-the triumph, right side Wars 7.5.6) or repoint 34 and drop the decode.
-Requires touching `atwill-parallels.json` hand-patch section, not the parser.
+### #34 — wrong endpoints for "Simon condemned and John spared" (RESOLVED)
+**Issue.** The row anchored Luke 4:23 ↔ Wars 3.7.31 because chapter 5's coda
+interleaves two arguments and the parser grabbed the first citations (the
+Nazareth brow-of-the-hill decode) rather than the titular claim.
+**Resolution.** Repointed to John 21:18–22 ↔ Wars 7.5.6 (Simon bar Gioras
+executed at the triumph; John of Gischala's perpetual imprisonment is Wars
+6.9.4, noted in the verification). Verdict re-graded *supported*: a Simon
+condemned and a John spared are literally present in both texts. Surfaced by
+a reader hitting the mismatch in the app — exactly what the index is for.
+The Nazareth decode remains discussed in the findings doc but is no longer a
+row endpoint.
 
 ### #3 — verification miss, corrected (method lesson)
 **Issue.** Initially graded *partial* with the note "the 'right hand' half I

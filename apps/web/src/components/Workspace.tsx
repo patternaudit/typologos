@@ -590,36 +590,79 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   );
 
   const selectedParallel = parallels.find((p) => p.id === selectedParallelId) ?? null;
+  const [hoveredParallelIds, setHoveredParallelIds] = useState<string[]>([]);
 
-  // While a parallel's inspector is open, its full verse RANGES stay softly
-  // lit in whichever pane shows each document. The range end lives in the ref
-  // string ("Luke 23:50-53"); the stored segment is the range head.
+  // A parallel's full verse RANGE (the range end lives in the ref string,
+  // e.g. "Luke 23:50-53"; the stored segment is the range head).
+  const parallelRangeIds = useCallback((segId: string | null, ref: string): string[] => {
+    if (!segId) return [];
+    const m = segId.match(/^seg-(.+)-(\d+)-(\d+)$/);
+    if (!m) return [];
+    const [, doc, ch, v] = m;
+    const endM = ref.match(/:(\d+)\s*[-–]\s*(\d+)\s*$/);
+    const start = Number(v);
+    const end = endM ? Number(endM[2]) : start;
+    const ids: string[] = [];
+    for (let i = start; i <= Math.max(start, end); i++) ids.push(`seg-${doc}-${ch}-${i}`);
+    return ids;
+  }, []);
+
+  // Every segment that belongs to some parallel's range -> the parallels
+  // touching it (for hover-to-illuminate on the text itself).
+  const parallelsBySegment = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const p of parallels) {
+      const ids = [
+        ...parallelRangeIds(p.leftSegmentId, p.leftRef),
+        ...parallelRangeIds(p.rightSegmentId, p.rightRef),
+      ];
+      for (const id of ids) {
+        const list = map.get(id) ?? [];
+        list.push(p.id);
+        map.set(id, list);
+      }
+    }
+    return map;
+  }, [parallels, parallelRangeIds]);
+
+  const assignToSides = useCallback(
+    (ids: string[]): Record<PaneSide, Set<string>> => {
+      const sets: Record<PaneSide, Set<string>> = { left: new Set(), right: new Set() };
+      (["left", "right"] as PaneSide[]).forEach((side) => {
+        const view = side === "left" ? views.left : views.right;
+        if (view?.mode !== "book") return;
+        for (const id of ids) if (id.startsWith(`seg-${view.bookId}-`)) sets[side].add(id);
+      });
+      return sets;
+    },
+    [views],
+  );
+
+  // Persistent highlight: the open inspector's parallel (fades in, settles).
   const parallelHighlights = useMemo(() => {
-    const sets: Record<PaneSide, Set<string>> = { left: new Set(), right: new Set() };
-    if (!selectedParallel) return sets;
-    const rangeIds = (segId: string | null, ref: string): string[] => {
-      if (!segId) return [];
-      const m = segId.match(/^seg-(.+)-(\d+)-(\d+)$/);
-      if (!m) return [];
-      const [, doc, ch, v] = m;
-      const endM = ref.match(/:(\d+)\s*[-–]\s*(\d+)\s*$/);
-      const start = Number(v);
-      const end = endM ? Number(endM[2]) : start;
-      const ids: string[] = [];
-      for (let i = start; i <= Math.max(start, end); i++) ids.push(`seg-${doc}-${ch}-${i}`);
-      return ids;
-    };
-    const all = [
-      ...rangeIds(selectedParallel.leftSegmentId, selectedParallel.leftRef),
-      ...rangeIds(selectedParallel.rightSegmentId, selectedParallel.rightRef),
-    ];
-    (["left", "right"] as PaneSide[]).forEach((side) => {
-      const view = side === "left" ? views.left : views.right;
-      if (view?.mode !== "book") return;
-      for (const id of all) if (id.startsWith(`seg-${view.bookId}-`)) sets[side].add(id);
-    });
-    return sets;
-  }, [selectedParallel, views]);
+    if (!selectedParallel) return { left: new Set<string>(), right: new Set<string>() };
+    return assignToSides([
+      ...parallelRangeIds(selectedParallel.leftSegmentId, selectedParallel.leftRef),
+      ...parallelRangeIds(selectedParallel.rightSegmentId, selectedParallel.rightRef),
+    ]);
+  }, [selectedParallel, parallelRangeIds, assignToSides]);
+
+  // Transient highlight: parallels under the cursor (arc hover, or hovering a
+  // verse inside a parallel's range) — instant, both sides.
+  const hoverHighlights = useMemo(() => {
+    if (hoveredParallelIds.length === 0)
+      return { left: new Set<string>(), right: new Set<string>() };
+    const ids: string[] = [];
+    for (const pid of hoveredParallelIds) {
+      const p = parallels.find((x) => x.id === pid);
+      if (!p) continue;
+      ids.push(
+        ...parallelRangeIds(p.leftSegmentId, p.leftRef),
+        ...parallelRangeIds(p.rightSegmentId, p.rightRef),
+      );
+    }
+    return assignToSides(ids);
+  }, [hoveredParallelIds, parallels, parallelRangeIds, assignToSides]);
 
   // From the overview: load a chapter pair into the reading panes.
   const openOverviewPair = useCallback(
@@ -899,6 +942,11 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
               linkedAnchorIds={linkedAnchorIds}
               motifsBySegment={motifsBySegment.left}
               highlightSegments={parallelHighlights.left}
+              hoverHighlightSegments={hoverHighlights.left}
+              parallelSegments={parallelsBySegment}
+              onParallelHover={(segId) =>
+                setHoveredParallelIds(segId ? parallelsBySegment.get(segId) ?? [] : [])
+              }
               scrollTargetKey={scrollTargets.left}
               selection={leftSelection}
               draftAnchor={draftSourceId ? anchorsById.get(draftSourceId) ?? null : null}
@@ -928,6 +976,11 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
               linkedAnchorIds={linkedAnchorIds}
               motifsBySegment={motifsBySegment.right}
               highlightSegments={parallelHighlights.right}
+              hoverHighlightSegments={hoverHighlights.right}
+              parallelSegments={parallelsBySegment}
+              onParallelHover={(segId) =>
+                setHoveredParallelIds(segId ? parallelsBySegment.get(segId) ?? [] : [])
+              }
               scrollTargetKey={scrollTargets.right}
               selection={rightSelection}
               draftAnchor={draftTargetId ? anchorsById.get(draftTargetId) ?? null : null}
@@ -947,7 +1000,15 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
           )}
         </div>
 
-        <MotifArcOverlay arcs={motifArcs} onArcClick={handleArcClick} />
+        <MotifArcOverlay
+          arcs={motifArcs}
+          onArcClick={handleArcClick}
+          onArcHover={(arc) =>
+            setHoveredParallelIds(
+              arc?.kind === "parallel" && arc.parallelId ? [arc.parallelId] : [],
+            )
+          }
+        />
 
         <ConnectorOverlay
           links={data.links}

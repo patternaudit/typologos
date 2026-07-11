@@ -14,7 +14,7 @@ at home in the mainstream hypothesis that Luke's author knew Josephus's
 writings — the point of the tool is to let you weigh those readings with both
 texts open.
 
-**Tally: 20 supported · 14 partial · 0 unsupported.** No cited passage was
+**Tally: 21 supported · 13 partial · 0 unsupported.** No cited passage was
 missing or misquoted; Atwill's citations are faithful throughout. "Partial"
 means the correspondence is carried substantially by his satiric
 interpretation rather than by shared text.
@@ -377,16 +377,20 @@ text; the Arimathea/Bar-Matthias name-play is interpretive garnish on top of
 a genuinely eerie structural match. Note it comes from *Life*, not *Wars* —
 outside the campaign narrative that carries the rest of the sequence.
 
-### 34. Simon condemned and John spared — **PARTIAL**
-Luke 4:23–30 (as imported) ↔ Wars 3.7.31 / see Wars 7.5.6 · [open](http://localhost:3001/?left=kjv-Luke:4:23&right=jos-War-3:7:31&parallel=par-atwill-34)
+### 34. Simon condemned and John spared — **SUPPORTED** *(endpoints corrected)*
+John 21:18–22 ↔ Wars 7.5.6 (with 6.9.4) · [open](http://localhost:3001/?left=kjv-John:21:18&right=jos-War-7:5:6&parallel=par-atwill-34)
 
-The sequence's coda has two halves. The core claim — at the Flavian triumph
-**Simon** is condemned and executed while **John** is spared with life
-imprisonment (Wars 7.5.6), mirroring the fates around Simon Peter and John —
-is textually accurate about Josephus but our imported row currently anchors
-the *other* half: Atwill's closing decode of the Nazareth brow-of-the-hill
-episode against the Japha/Jotapata battles (Wars 3.7). Endpoint refinement
-is on the morning menu; graded partial until the row points at Wars 7.5.6.
+The sequence's coda. John 21 pairs two fates: Simon Peter's death is foretold
+("when thou shalt be old… another shall gird thee, and carry thee whither
+thou wouldest not") while John is spared ("If I will that he **tarry** till I
+come"). Josephus pairs the same two names: **Simon** bar Gioras is led in the
+Flavian triumph with a rope on his head and executed (Wars 7.5.6), while
+**John** of Gischala is spared to perpetual imprisonment (Wars 6.9.4). A
+Simon condemned and a John spared, literally in both texts; identifying the
+Gospel pair with the rebel leaders is the interpretive layer. *This row
+originally anchored the wrong half of Atwill's coda (the Nazareth
+brow-of-the-hill decode, Luke 4 ↔ Wars 3.7) — a parsing artifact of the
+chapter's interleaved arguments, since corrected.*
 
 ---
 

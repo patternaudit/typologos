@@ -558,8 +558,15 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   border-radius: 4px;
   transition: background 140ms ease;
 }
+/* Hover-triggered range illumination: same faint tint, no entrance flash. */
+.block-text.range-lit-hover {
+  background: rgba(246, 226, 189, 0.3);
+  border-radius: 4px;
+  transition: background 140ms ease;
+}
 .verse-flash:hover,
-.block-text.range-lit:hover {
+.block-text.range-lit:hover,
+.block-text.range-lit-hover:hover {
   background: rgba(239, 207, 150, 0.85) !important;
 }
 @keyframes verseflash {

@@ -36,8 +36,14 @@ interface PassagePaneProps {
   selectedLinkAnchorIds: Set<string>;
   linkedAnchorIds: Set<string>;
   motifsBySegment: Map<string, PassageMotifInstance[]>;
-  // Verse segments to keep softly lit (e.g. an open parallel's full range).
+  // Verse segments to keep softly lit (the open parallel's full range;
+  // fades in and settles).
   highlightSegments: Set<string>;
+  // Transient highlight (hovering an arc or a parallel's text): instant.
+  hoverHighlightSegments: Set<string>;
+  // Segments that belong to some parallel's range (hover to illuminate it).
+  parallelSegments: Map<string, string[]>;
+  onParallelHover: (segmentId: string | null) => void;
   // Block key to scroll into view (and briefly flash) once rendered.
   scrollTargetKey: string | null;
   // This pane's pending text selection and staged draft anchor, for the
@@ -67,6 +73,9 @@ export function PassagePane({
   linkedAnchorIds,
   motifsBySegment,
   highlightSegments,
+  hoverHighlightSegments,
+  parallelSegments,
+  onParallelHover,
   scrollTargetKey,
   selection,
   draftAnchor,
@@ -150,15 +159,22 @@ export function PassagePane({
     const blockMotifs = block.segmentId ? motifsBySegment.get(block.segmentId) ?? [] : [];
     const annotated = blockMotifs.length > 0;
     const lit = block.segmentId !== null && highlightSegments.has(block.segmentId);
+    const hoverLit =
+      !lit && block.segmentId !== null && hoverHighlightSegments.has(block.segmentId);
+    const inParallel = block.segmentId !== null && parallelSegments.has(block.segmentId);
+    const interactive = annotated || inParallel;
     const verseBlock = (
       <div className={`block ${block.verseLabel ? "verse-block" : "doc-block"}`} key={block.key}>
         {block.verseLabel && <sup className="verse-num">{block.verseLabel}</sup>}
         <span
-          className={`block-text ${annotated ? "has-motifs" : ""} ${lit ? "range-lit" : ""}`}
+          className={`block-text ${annotated ? "has-motifs" : ""} ${lit ? "range-lit" : ""} ${hoverLit ? "range-lit-hover" : ""}`}
           data-block-key={block.key}
           onMouseEnter={
-            annotated
-              ? (e) => setTip({ x: e.clientX, y: e.clientY, motifs: blockMotifs })
+            interactive
+              ? (e) => {
+                  if (annotated) setTip({ x: e.clientX, y: e.clientY, motifs: blockMotifs });
+                  if (inParallel) onParallelHover(block.segmentId);
+                }
               : undefined
           }
           onMouseMove={
@@ -166,7 +182,14 @@ export function PassagePane({
               ? (e) => setTip({ x: e.clientX, y: e.clientY, motifs: blockMotifs })
               : undefined
           }
-          onMouseLeave={annotated ? () => setTip(null) : undefined}
+          onMouseLeave={
+            interactive
+              ? () => {
+                  if (annotated) setTip(null);
+                  if (inParallel) onParallelHover(null);
+                }
+              : undefined
+          }
           onClick={
             annotated
               ? () => {

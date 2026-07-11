@@ -19,6 +19,7 @@ export interface MotifArc {
 interface MotifArcOverlayProps {
   arcs: MotifArc[];
   onArcClick: (arc: MotifArc) => void;
+  onArcHover?: (arc: MotifArc | null) => void;
 }
 
 function pathFor(from: LocalRect, to: LocalRect): string {
@@ -33,7 +34,7 @@ function pathFor(from: LocalRect, to: LocalRect): string {
 // The Wilson reference layer's strings: quiet dashed arcs, visually beneath
 // the user's own solid links. Hover to see the shared motifs; click to open
 // the drawer on the left verse.
-export function MotifArcOverlay({ arcs, onArcClick }: MotifArcOverlayProps) {
+export function MotifArcOverlay({ arcs, onArcClick, onArcHover }: MotifArcOverlayProps) {
   const [hover, setHover] = useState<{ key: string; x: number; y: number } | null>(null);
   const hoveredArc = hover ? arcs.find((a) => a.key === hover.key) ?? null : null;
 
@@ -53,9 +54,15 @@ export function MotifArcOverlay({ arcs, onArcClick }: MotifArcOverlayProps) {
                 strokeWidth={14}
                 fill="none"
                 style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                onMouseEnter={(e) => setHover({ key: arc.key, x: e.clientX, y: e.clientY })}
+                onMouseEnter={(e) => {
+                  setHover({ key: arc.key, x: e.clientX, y: e.clientY });
+                  onArcHover?.(arc);
+                }}
                 onMouseMove={(e) => setHover({ key: arc.key, x: e.clientX, y: e.clientY })}
-                onMouseLeave={() => setHover(null)}
+                onMouseLeave={() => {
+                  setHover(null);
+                  onArcHover?.(null);
+                }}
                 onClick={() => onArcClick(arc)}
               />
               <path
