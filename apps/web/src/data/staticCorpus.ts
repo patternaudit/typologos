@@ -22,9 +22,11 @@ import type { CorpusSource } from "./types";
 // Worker + wasm are copied into public/ by `npm run prepare:static` so the
 // bundler stays out of the picture.
 
-const DB_URL = "/typologos-public.sqlite";
-const WORKER_URL = "/sqlite.worker.js";
-const WASM_URL = "/sql-wasm.wasm";
+const BASE =
+  (import.meta as unknown as { env?: Record<string, string> }).env?.BASE_URL ?? "/";
+const DB_URL = BASE + "typologos-public.sqlite";
+const WORKER_URL = BASE + "sqlite.worker.js";
+const WASM_URL = BASE + "sql-wasm.wasm";
 
 let workerPromise: Promise<WorkerHttpvfs> | null = null;
 
