@@ -721,16 +721,6 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             Reading
           </button>
           <button
-            className={indexOpen && !startOpen ? "active" : ""}
-            onClick={() => {
-              setIndexOpen(true);
-              setOverviewOpen(false);
-              setStartOpen(false);
-            }}
-          >
-            Index
-          </button>
-          <button
             className={overviewOpen && !startOpen && !indexOpen ? "active" : ""}
             onClick={() => {
               setOverviewOpen(true);
@@ -739,6 +729,16 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             }}
           >
             Overview
+          </button>
+          <button
+            className={indexOpen && !startOpen ? "active" : ""}
+            onClick={() => {
+              setIndexOpen(true);
+              setOverviewOpen(false);
+              setStartOpen(false);
+            }}
+          >
+            Index
           </button>
         </nav>
         <div className="layer-menu">
