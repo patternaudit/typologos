@@ -7,6 +7,7 @@ import type {
   HydratedWorkspace,
   Link,
   MotifDetail,
+  MotifSummary,
   OverviewConnection,
   OverviewStructure,
   Parallel,
@@ -57,6 +58,10 @@ export function fetchOverviewConnections(
   return fetch(
     `/api/overview/connections?left=${encodeURIComponent(left)}&right=${encodeURIComponent(right)}`,
   ).then((r) => json<OverviewConnection[]>(r));
+}
+
+export function fetchMotifIndex(): Promise<MotifSummary[]> {
+  return fetch("/api/motifs").then((r) => json<MotifSummary[]>(r));
 }
 
 export function fetchMotifDetail(id: string): Promise<MotifDetail> {

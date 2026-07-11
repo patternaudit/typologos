@@ -41,6 +41,14 @@ const GROUPS: Group[] = [
         tag: "overview",
         color: "#b8742a",
       },
+      {
+        title: "The Index",
+        blurb:
+          "Every connection, listed: all 34 Atwill parallels with verdicts, the Mason touchpoints, and Wilson's 1,100 symbols — searchable, one click to open any of them.",
+        href: "?index=1",
+        tag: "index",
+        color: "#9b9183",
+      },
     ],
   },
   {

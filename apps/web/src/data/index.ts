@@ -8,6 +8,7 @@ import type {
   LayerExport,
   Link,
   MotifDetail,
+  MotifSummary,
   OverviewConnection,
   OverviewStructure,
   Parallel,
@@ -45,6 +46,7 @@ export const fetchBookMotifs = (id: string): Promise<PassageMotifInstance[]> =>
   corpus.fetchBookMotifs(id);
 export const fetchMotifDetail = (id: string): Promise<MotifDetail> =>
   corpus.fetchMotifDetail(id);
+export const fetchMotifIndex = (): Promise<MotifSummary[]> => corpus.fetchMotifIndex();
 export const fetchParallels = (): Promise<Parallel[]> => corpus.fetchParallels();
 export const fetchOverviewStructure = (scope: string): Promise<OverviewStructure> =>
   corpus.fetchOverviewStructure(scope);

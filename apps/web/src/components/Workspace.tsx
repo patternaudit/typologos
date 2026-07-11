@@ -21,6 +21,7 @@ import { MotifPanel } from "./MotifPanel";
 import { ParallelInspector } from "./ParallelInspector";
 import { Overview } from "./Overview";
 import { StartScreen } from "./StartScreen";
+import { IndexPage } from "./IndexPage";
 import { MotifArcOverlay, type MotifArc } from "./MotifArcOverlay";
 import type { LocalRect } from "../hooks/useAnchorRects";
 
@@ -66,14 +67,17 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     () => new URLSearchParams(window.location.search).get("overview") === "1",
   );
   const [linkModalOpen, setLinkModalOpen] = useState(false);
-  // Land on the curated start screen when arriving with no saved place and no
-  // deep link; reopenable from the topbar.
+  // A plain URL (no params) always lands on the curated start screen; deep
+  // links go straight to their destination. Saved pane views still resume
+  // underneath once the visitor leaves Start.
   const [startOpen, setStartOpen] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("start") === "1") return true;
-    if ([...params.keys()].length > 0) return false;
-    return localStorage.getItem(`typologos:views:${workspaceId}`) === null;
+    return [...params.keys()].length === 0;
   });
+  const [indexOpen, setIndexOpen] = useState(
+    () => new URLSearchParams(window.location.search).get("index") === "1",
+  );
   // Verse block to scroll into view once its pane has rendered (segment id).
   const [scrollTargets, setScrollTargets] = useState<{
     left: string | null;
@@ -701,24 +705,37 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
             onClick={() => {
               setStartOpen(true);
               setOverviewOpen(false);
+              setIndexOpen(false);
             }}
           >
             Start
           </button>
           <button
-            className={!overviewOpen && !startOpen ? "active" : ""}
+            className={!overviewOpen && !startOpen && !indexOpen ? "active" : ""}
             onClick={() => {
               setOverviewOpen(false);
               setStartOpen(false);
+              setIndexOpen(false);
             }}
           >
             Reading
           </button>
           <button
-            className={overviewOpen && !startOpen ? "active" : ""}
+            className={indexOpen && !startOpen ? "active" : ""}
+            onClick={() => {
+              setIndexOpen(true);
+              setOverviewOpen(false);
+              setStartOpen(false);
+            }}
+          >
+            Index
+          </button>
+          <button
+            className={overviewOpen && !startOpen && !indexOpen ? "active" : ""}
             onClick={() => {
               setOverviewOpen(true);
               setStartOpen(false);
+              setIndexOpen(false);
             }}
           >
             Overview
@@ -774,6 +791,47 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
       <div className="workspace-main" ref={mainRef}>
         {startOpen && <StartScreen onClose={() => setStartOpen(false)} />}
+        {indexOpen && !startOpen && (
+          <IndexPage
+            parallels={parallels}
+            links={data.links}
+            anchorsById={anchorsById}
+            onOpenParallel={(p) => {
+              openParallelPair(p);
+              setSelectedParallelId(p.id);
+              setIndexOpen(false);
+              setOverviewOpen(false);
+            }}
+            onOpenLink={(l) => {
+              const s = anchorsById.get(l.sourceAnchorId);
+              const t = anchorsById.get(l.targetAnchorId);
+              const viewFor = (a: Anchor | undefined): PaneView | null => {
+                if (!a) return null;
+                return a.segmentId
+                  ? { mode: "book", bookId: a.documentId }
+                  : { mode: "document", documentId: a.documentId };
+              };
+              const lv = viewFor(s);
+              const rv = viewFor(t);
+              if (lv && rv) {
+                setViews({ left: lv, right: rv });
+                setScrollTargets({
+                  left: s?.segmentId ?? null,
+                  right: t?.segmentId ?? null,
+                });
+              }
+              selectLink(l.id);
+              setIndexOpen(false);
+              setOverviewOpen(false);
+            }}
+            onOpenInstance={(documentId, chapter, verse) => {
+              setViews((v) => ({ ...v, left: { mode: "book", bookId: documentId } }));
+              setScrollTargets((t) => ({ ...t, left: `seg-${documentId}-${chapter}-${verse}` }));
+              setIndexOpen(false);
+              setOverviewOpen(false);
+            }}
+          />
+        )}
         {overviewOpen && (
           <Overview
             initialLeft={new URLSearchParams(window.location.search).get("a") ?? undefined}

@@ -855,6 +855,89 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   user-select: none;
 }
 
+/* ---------- index page ---------- */
+
+.index-page {
+  position: absolute;
+  inset: 0;
+  z-index: 41;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.index-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px 32px 80px;
+}
+.index-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+.index-head h1 { font-size: 26px; margin: 0; }
+.index-filter {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 14px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+}
+.index-section { margin-bottom: 30px; }
+.index-section h2 {
+  font-size: 16px;
+  margin: 0 0 4px;
+  padding-left: 10px;
+  border-left: 4px solid var(--accent);
+}
+.index-count { font-size: 12px; color: var(--ink-faint); font-weight: 400; }
+.index-blurb { margin: 2px 0 10px 14px; font-size: 12.5px; color: var(--ink-faint); }
+.index-rows { display: flex; flex-direction: column; gap: 4px; }
+.index-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 13.5px;
+}
+.index-row:not(:disabled):hover {
+  transform: none;
+  border-color: var(--highlight-strong);
+  background: #fff8ea;
+}
+.index-row-num { color: var(--ink-faint); font-size: 11px; min-width: 26px; }
+.index-row-title { font-weight: 600; flex: 1; min-width: 0; }
+.index-row-refs { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
+.index-motifs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.index-motif {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-edge);
+  background: var(--panel);
+}
+.index-motif:not(:disabled):hover { transform: none; border-color: var(--highlight-strong); }
+.index-motif.active { background: var(--highlight); border-color: var(--highlight-strong); }
+.index-motif-detail {
+  margin: 0 0 12px 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--highlight-strong);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
 /* ---------- start screen ---------- */
 
 .start-screen {

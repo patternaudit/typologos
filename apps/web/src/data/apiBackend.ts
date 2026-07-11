@@ -17,6 +17,7 @@ export class ApiCorpus implements CorpusSource {
   fetchBookPassage = client.fetchBookPassage;
   fetchBookMotifs = client.fetchBookMotifs;
   fetchMotifDetail = client.fetchMotifDetail;
+  fetchMotifIndex = client.fetchMotifIndex;
   fetchParallels = client.fetchParallels;
   fetchOverviewStructure = client.fetchOverviewStructure;
   fetchOverviewConnections = client.fetchOverviewConnections;

@@ -8,6 +8,7 @@ import type {
   LayerExport,
   Link,
   MotifDetail,
+  MotifSummary,
   OverviewConnection,
   OverviewStructure,
   Parallel,
@@ -23,6 +24,7 @@ export interface CorpusSource {
   fetchBookPassage(documentId: string): Promise<BookPassage>;
   fetchBookMotifs(documentId: string): Promise<PassageMotifInstance[]>;
   fetchMotifDetail(id: string): Promise<MotifDetail>;
+  fetchMotifIndex(): Promise<MotifSummary[]>;
   fetchParallels(): Promise<Parallel[]>;
   fetchOverviewStructure(scope: string): Promise<OverviewStructure>;
   // Wilson + parallel connections; the user-link layer is merged in by the

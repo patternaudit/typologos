@@ -8,6 +8,7 @@ import type {
   Motif,
   MotifDetail,
   MotifInstance,
+  MotifSummary,
   OverviewConnection,
   OverviewStructure,
   Parallel,
@@ -227,6 +228,20 @@ export class StaticCorpus implements CorpusSource {
     ]);
     if (motifRows.length === 0) throw new Error(`motif not found: ${id}`);
     return { motif: toMotif(motifRows[0]), instances: instanceRows.map(toMotifInstance) };
+  }
+
+  async fetchMotifIndex(): Promise<MotifSummary[]> {
+    const rows = await query(
+      `SELECT m.id, m.headword, m.source, COUNT(mi.id) AS n
+       FROM motifs m LEFT JOIN motif_instances mi ON mi.motif_id = m.id
+       GROUP BY m.id ORDER BY m.headword COLLATE NOCASE`,
+    );
+    return rows.map((r) => ({
+      id: r.id as string,
+      headword: r.headword as string,
+      source: r.source as string,
+      instanceCount: Number(r.n),
+    }));
   }
 
   async fetchParallels(): Promise<Parallel[]> {

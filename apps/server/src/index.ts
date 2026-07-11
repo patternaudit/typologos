@@ -17,6 +17,7 @@ import type {
   Motif,
   MotifDetail,
   MotifInstance,
+  MotifSummary,
   PaneSide,
   Parallel,
   PassageMotifInstance,
@@ -332,6 +333,24 @@ app.get("/api/passages/:documentId/:chapter/motifs", (c) => {
     headword: r.headword as string,
   }));
   return c.json(instances);
+});
+
+// All motifs with instance counts (Index view).
+app.get("/api/motifs", (c) => {
+  const rows = db
+    .prepare(
+      `SELECT m.id, m.headword, m.source, COUNT(mi.id) AS n
+       FROM motifs m LEFT JOIN motif_instances mi ON mi.motif_id = m.id
+       GROUP BY m.id ORDER BY m.headword COLLATE NOCASE`,
+    )
+    .all() as Row[];
+  const motifs: MotifSummary[] = rows.map((r) => ({
+    id: r.id as string,
+    headword: r.headword as string,
+    source: r.source as string,
+    instanceCount: Number(r.n),
+  }));
+  return c.json(motifs);
 });
 
 // One motif with all its instances across the corpus (e.g. every verse Wilson

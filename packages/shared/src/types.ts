@@ -167,6 +167,14 @@ export interface MotifDetail {
   instances: MotifInstance[];
 }
 
+// Compact motif listing for the Index view.
+export interface MotifSummary {
+  id: string;
+  headword: string;
+  source: string;
+  instanceCount: number;
+}
+
 // ---- claimed parallels (imported sources, e.g. Atwill's Caesar's Messiah) ----
 
 export type ParallelVerdict = "supported" | "partial" | "unsupported" | "unchecked";
