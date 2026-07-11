@@ -27,6 +27,12 @@ npm run dev:static -w @typologos/web      # static mode on :3002
 npm run build:static -w @typologos/web    # production bundle (deploy dist/ + public/ anywhere static)
 ```
 
+**Deploying**: pushes to `main` auto-deploy the static build to GitHub Pages
+(`.github/workflows/pages.yml`). The published database is committed, so CI
+never needs the (untracked, copyrighted) Wilson source text — after changing
+data, run `npm run db:publish` and commit the refreshed
+`apps/web/public/typologos-public.sqlite`.
+
 **Portable layers**: *Export layer* downloads your anchors + links as a
 `typologos-layer-*.json` file (Excalidraw-style); *Import layer* merges
 someone else's file into your store (duplicates skipped). Works in both

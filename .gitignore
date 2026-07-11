@@ -22,3 +22,6 @@ sources/
 apps/web/public/sqlite.worker.js
 apps/web/public/sql-wasm.wasm
 !apps/web/public/typologos-public.sqlite
+
+# per-directory gh identity (contains a token — never commit)
+.envrc
