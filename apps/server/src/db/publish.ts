@@ -87,6 +87,15 @@ db.exec("DELETE FROM anchors;");
 db.exec("DELETE FROM links;");
 db.exec("DELETE FROM workspaces;");
 db.exec("DELETE FROM workspace_panes;");
+
+// The control-experiment layer ships only once the maintainer has reviewed
+// the results (docs/control-experiment.md); pass --include-control then.
+if (!process.argv.includes("--include-control")) {
+  db.exec("DELETE FROM parallels WHERE source = 'control-anabasis';");
+  db.exec("DELETE FROM segments WHERE document_id LIKE 'xen-%';");
+  db.exec("DELETE FROM documents WHERE id LIKE 'xen-%';");
+  console.log("[publish] control-experiment layer excluded (pre-review)");
+}
 db.exec("DELETE FROM documents WHERE id NOT LIKE 'kjv-%' AND id NOT LIKE 'jos-%';");
 db.exec(
   "DELETE FROM segments WHERE document_id NOT LIKE 'kjv-%' AND document_id NOT LIKE 'jos-%';",

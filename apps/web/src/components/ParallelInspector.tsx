@@ -41,7 +41,10 @@ export function ParallelInspector({ parallel, onClose, onOpenPair }: ParallelIns
       </div>
 
       <div className="inspector-section">
-        <div className="inspector-label">Josephus · {parallel.rightRef}</div>
+        <div className="inspector-label">
+          {parallel.rightDocumentId.startsWith("xen-") ? "Xenophon" : "Josephus"} ·{" "}
+          {parallel.rightRef}
+        </div>
         <blockquote>{parallel.rightQuote ?? "—"}</blockquote>
       </div>
 
@@ -57,7 +60,14 @@ export function ParallelInspector({ parallel, onClose, onOpenPair }: ParallelIns
       </div>
 
       <p className="motif-panel-note">
-        {parallel.source === "mason-dependence" ? (
+        {parallel.source === "control-anabasis" ? (
+          <>
+            From the control experiment: a parallel mined between Luke and Xenophon's{" "}
+            <em>Anabasis</em> — a text nobody claims Luke read — under pre-registered rules,
+            graded with the same standard as the Atwill layer. It measures what a motivated
+            reader can find, not a real dependence.
+          </>
+        ) : parallel.source === "mason-dependence" ? (
           <>
             From the "Luke used Josephus" source hypothesis (Krenkel 1894; Mason 1992;
             Pervo 2006). Verification checks the cited texts only — not the dependence

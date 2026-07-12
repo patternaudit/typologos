@@ -191,7 +191,7 @@ app.get("/api/documents/:id", (c) => {
 app.get("/api/books", (c) => {
   const rows = db
     .prepare(
-      "SELECT * FROM documents WHERE id LIKE 'kjv-%' OR id LIKE 'jos-%' ORDER BY CASE WHEN id LIKE 'kjv-%' THEN 0 ELSE 1 END, rowid",
+      "SELECT * FROM documents WHERE id LIKE 'kjv-%' OR id LIKE 'jos-%' OR id LIKE 'xen-%' ORDER BY CASE WHEN id LIKE 'kjv-%' THEN 0 ELSE 1 END, rowid",
     )
     .all() as Row[];
   const books: BookSummary[] = rows.map((r, i) => {

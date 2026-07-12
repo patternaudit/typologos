@@ -122,7 +122,7 @@ const NAV_ICONS: Record<string, JSX.Element> = {
   ),
 };
 
-const INDEX_SLUGS: IndexSection[] = ["atwill", "mason", "wilson", "links"];
+const INDEX_SLUGS: IndexSection[] = ["atwill", "mason", "wilson", "control", "links"];
 
 function indexSectionFromParam(raw: string | null): IndexSection | null {
   if (raw === "1") return "atwill"; // legacy links
@@ -1012,6 +1012,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
           <Overview
             initialLeft={new URLSearchParams(window.location.search).get("a") ?? undefined}
             initialRight={new URLSearchParams(window.location.search).get("b") ?? undefined}
+            hiddenScopes={books.some((b) => b.id.startsWith("xen-")) ? [] : ["anabasis"]}
             onClose={() => setOverviewOpen(false)}
             onOpenPair={openOverviewPair}
             onLoadBook={(side, documentId) =>

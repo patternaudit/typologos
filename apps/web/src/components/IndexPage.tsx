@@ -7,7 +7,7 @@ import { LoadingIndicator } from "./LoadingIndicator";
 // section lives in the URL (?index=atwill|mason|wilson|links) so the browser
 // back button returns here after opening an item.
 
-export type IndexSection = "atwill" | "mason" | "wilson" | "links";
+export type IndexSection = "atwill" | "mason" | "wilson" | "control" | "links";
 
 export const INDEX_SECTIONS: {
   slug: IndexSection;
@@ -41,6 +41,14 @@ export const INDEX_SECTIONS: {
       "Every symbol headword from Wilson's Dictionary of Bible Types. Click one to list its passages; click a passage to open it in the left pane.",
   },
   {
+    slug: "control",
+    label: "Control experiment",
+    heading: "Control: Luke ↔ Xenophon's Anabasis",
+    color: "#2f7d74",
+    blurb:
+      "The base-rate check: parallels a motivated reader can mine between Luke and a text nobody claims Luke read, under pre-registered rules, graded with the identical standard.",
+  },
+  {
     slug: "links",
     label: "My links",
     heading: "My links",
@@ -52,6 +60,7 @@ export const INDEX_SECTIONS: {
 const SECTION_SOURCE: Record<string, string> = {
   atwill: "atwill-cm",
   mason: "mason-dependence",
+  control: "control-anabasis",
 };
 
 interface IndexPageProps {
@@ -169,7 +178,7 @@ export function IndexPage({
             onChange={(e) => setFilter(e.target.value)}
           />
 
-          {(section === "atwill" || section === "mason") && (
+          {(section === "atwill" || section === "mason" || section === "control") && (
             <div className="index-rows">
               {sectionParallels.map((p) => (
                 <button key={p.id} className="index-row" onClick={() => onOpenParallel(p)}>

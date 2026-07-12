@@ -13,8 +13,11 @@
     "motifs:import": "tsx src/corpus/wilson.ts",
     "josephus:download": "curl -fsSL -o data/josephus-wars.txt https://www.gutenberg.org/cache/epub/2850/pg2850.txt && curl -fsSL -o data/josephus-life.txt https://www.gutenberg.org/cache/epub/2846/pg2846.txt && curl -fsSL -o data/josephus-antiquities.txt https://www.gutenberg.org/cache/epub/2848/pg2848.txt",
     "josephus:import": "tsx src/corpus/josephus.ts",
+    "anabasis:download": "curl -fsSL -o data/anabasis.txt https://www.gutenberg.org/cache/epub/1170/pg1170.txt",
+    "anabasis:import": "tsx src/corpus/anabasis.ts",
     "atwill:import": "tsx src/corpus/atwill.ts",
     "mason:import": "tsx src/corpus/mason.ts",
+    "control:import": "tsx src/corpus/control.ts",
     "db:publish": "tsx src/db/publish.ts"
   },
   "dependencies": {

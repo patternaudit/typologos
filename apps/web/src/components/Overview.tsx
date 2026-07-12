@@ -16,6 +16,7 @@ const SCOPES: { id: string; label: string }[] = [
   { id: "josephus", label: "Josephus (all)" },
   { id: "wars", label: "Wars of the Jews" },
   { id: "antiquities", label: "Antiquities" },
+  { id: "anabasis", label: "Anabasis (control)" },
 ];
 
 const W = 1440;
@@ -59,6 +60,14 @@ const LAYERS: LayerDef[] = [
     dash: "3 3",
     hint: "Touchpoints for the mainstream 'Luke used Josephus' source hypothesis (Theudas, the census, the Egyptian, …).",
     match: (c) => c.kind === "parallel" && c.source === "mason-dependence",
+  },
+  {
+    id: "control-anabasis",
+    label: "Control (Anabasis)",
+    color: "#2f7d74",
+    dash: "3 3",
+    hint: "The control experiment: Luke ↔ Xenophon's Anabasis parallels mined under pre-registered rules and graded with the same standard as the Atwill layer.",
+    match: (c) => c.kind === "parallel" && c.source === "control-anabasis",
   },
   {
     id: "link",
@@ -115,6 +124,9 @@ function layoutStrip(s: OverviewStructure): StripLayout {
 interface OverviewProps {
   initialLeft?: string;
   initialRight?: string;
+  // Scope ids whose documents are absent from this build (hidden from the
+  // COMPARE dropdowns) — e.g. the control corpus before its review ships.
+  hiddenScopes?: string[];
   onClose: () => void;
   onOpenPair: (
     leftDoc: string,
@@ -129,10 +141,12 @@ interface OverviewProps {
 export function Overview({
   initialLeft,
   initialRight,
+  hiddenScopes,
   onClose,
   onOpenPair,
   onLoadBook,
 }: OverviewProps) {
+  const scopes = SCOPES.filter((s) => !hiddenScopes?.includes(s.id));
   const [leftScope, setLeftScope] = useState(initialLeft ?? "ot");
   const [rightScope, setRightScope] = useState(initialRight ?? "nt");
   const [left, setLeft] = useState<OverviewStructure | null>(null);
@@ -258,7 +272,7 @@ export function Overview({
         <span className="ov-group">
           <span className="ov-group-label">Compare</span>
           <select value={leftScope} onChange={(e) => setLeftScope(e.target.value)}>
-            {SCOPES.map((s) => (
+            {scopes.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.label}
               </option>
@@ -266,7 +280,7 @@ export function Overview({
           </select>
           <span className="overview-vs">↔</span>
           <select value={rightScope} onChange={(e) => setRightScope(e.target.value)}>
-            {SCOPES.map((s) => (
+            {scopes.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.label}
               </option>

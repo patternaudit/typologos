@@ -182,14 +182,14 @@ export class StaticCorpus implements CorpusSource {
           `SELECT d.id, d.title, d.reference,
                   (SELECT COUNT(*) FROM chapter_verse_counts c WHERE c.document_id = d.id) AS chapters
            FROM documents d
-           WHERE d.id LIKE 'kjv-%' OR d.id LIKE 'jos-%'
+           WHERE d.id LIKE 'kjv-%' OR d.id LIKE 'jos-%' OR d.id LIKE 'xen-%'
            ORDER BY CASE WHEN d.id LIKE 'kjv-%' THEN 0 ELSE 1 END, d.rowid`,
         )
       : await query(
           `SELECT d.id, d.title, d.reference,
                   (SELECT COUNT(*) FROM segments s WHERE s.document_id = d.id AND s.kind='chapter') AS chapters
            FROM documents d
-           WHERE d.id LIKE 'kjv-%' OR d.id LIKE 'jos-%'
+           WHERE d.id LIKE 'kjv-%' OR d.id LIKE 'jos-%' OR d.id LIKE 'xen-%'
            ORDER BY CASE WHEN d.id LIKE 'kjv-%' THEN 0 ELSE 1 END, d.rowid`,
         );
     return rows.map((r, i) => ({

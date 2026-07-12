@@ -236,6 +236,11 @@ export function scopeDocumentIds(scope: string): { label: string; ids: string[] 
         "jos-Life",
       ],
     };
+  if (scope === "anabasis")
+    return {
+      label: "Anabasis (control)",
+      ids: [1, 2, 3, 4, 5, 6, 7].map((n) => `xen-Anab-${n}`),
+    };
   if (scope.startsWith("book:")) return { label: scope.slice(5), ids: [scope.slice(5)] };
   return null;
 }
