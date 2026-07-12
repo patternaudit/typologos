@@ -607,36 +607,127 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
 }
 .parallel-inspector blockquote { border-left-color: #4a6b8a; }
 
-/* ---------- topbar view switch ---------- */
+/* ---------- topbar navigation ---------- */
 
-.view-switch {
-  display: inline-flex;
-  border: 1px solid var(--panel-edge);
-  border-radius: 999px;
-  overflow: hidden;
-  background: #fff;
+/* Masthead-style text links: lighter than a tab group, active view carries an
+   accent underline. */
+.main-nav {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
-.view-switch button {
+.main-nav button {
+  border: none;
+  background: transparent;
+  padding: 6px 10px 8px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  border-radius: 6px;
+  position: relative;
+}
+.main-nav button::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.main-nav button:not(:disabled):hover {
+  transform: none;
+  background: #fff8ea;
+  color: var(--ink);
+}
+.main-nav button.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+.main-nav button.active::after { background: var(--accent); }
+.main-nav .nav-about {
+  margin-left: 10px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* Utility actions live behind the ⋯ toggle. */
+.topbar-tools {
+  margin-left: auto;
+  position: relative;
+}
+.tools-toggle {
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 12px 8px;
+}
+.tools-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+}
+.tools-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.tools-pop button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--ink);
+  border-radius: 6px;
+}
+.tools-pop button:not(:disabled):hover { transform: none; background: #fff8ea; }
+.tools-pop .tools-about { display: none; }
+
+.small-ghost { padding: 5px 12px; font-size: 12px; border-radius: 999px; }
+
+/* ---------- mobile bottom tab bar ---------- */
+
+.bottom-nav {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: linear-gradient(0deg, #fffefb, #f8f2e7);
+  border-top: 1px solid var(--panel-edge);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.bottom-nav button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   border: none;
   border-radius: 0;
   background: transparent;
-  padding: 6px 16px;
-  font-size: 12px;
+  padding: 8px 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.03em;
   color: var(--ink-soft);
 }
-.view-switch button:not(:disabled):hover { transform: none; background: #fff8ea; }
-.view-switch button.active {
-  background: var(--accent);
-  color: #fff;
-  font-weight: 600;
-}
+.bottom-nav button:not(:disabled):hover { transform: none; }
+.bottom-nav button.active { color: var(--accent); font-weight: 600; }
 
-.layer-menu {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
-}
-.small-ghost { padding: 5px 12px; font-size: 12px; border-radius: 999px; }
+/* (Mobile layout overrides live at the end of this file so they win the
+   cascade over the component rules defined below.) */
 
 /* ---------- pane action bar (floating, contextual) ---------- */
 
@@ -1105,4 +1196,28 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   cursor: pointer;
   z-index: 50;
   box-shadow: var(--shadow);
+}
+
+/* ---------- mobile layout (must stay last to win the cascade) ---------- */
+
+@media (max-width: 720px) {
+  .topbar { padding: 10px 14px; gap: 12px; }
+  .brand { font-size: 16px; }
+  .main-nav { display: none; }
+  .tools-pop .tools-about { display: block; }
+  .bottom-nav { display: flex; }
+  /* Keep content clear of the fixed bottom bar. */
+  .workspace-main { margin-bottom: 54px; }
+
+  /* Narrow panes: give the text the width the desktop padding was using. */
+  .pane-body { padding: 16px 14px 80px; font-size: 15px; line-height: 1.75; }
+
+  /* Index rows: title on its own line, refs + verdict wrap beneath. */
+  .index-row { flex-wrap: wrap; row-gap: 4px; }
+  .index-row-title { flex: 1 1 100%; order: -1; }
+  .index-row-refs { white-space: normal; }
+
+  /* Overview toolbar: let the layer toggles wrap instead of clipping. */
+  .overview-bar { padding: 8px 12px; }
+  .ov-group { flex-wrap: wrap; }
 }

@@ -74,6 +74,54 @@ function segToParam(seg: string | null): string | null {
   return m ? `${m[1]}:${m[2]}:${m[3]}` : null;
 }
 
+// Inverse of viewFromParam, minus the scroll target (a bare book id keeps the
+// pane where it is).
+function viewToParam(v: PaneView | null): string | null {
+  if (!v) return null;
+  return v.mode === "document" ? `doc:${v.documentId}` : v.bookId;
+}
+
+function sameView(a: PaneView | null, b: PaneView | null): boolean {
+  if (!a || !b || a.mode !== b.mode) return a === b;
+  return a.mode === "book"
+    ? a.bookId === (b as { bookId: string }).bookId
+    : a.documentId === (b as { documentId: string }).documentId;
+}
+
+// Line icons for the mobile bottom tab bar.
+const NAV_ICONS: Record<string, JSX.Element> = {
+  start: (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5.5 9.5V20h13V9.5" />
+    </svg>
+  ),
+  reading: (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 6c-1.8-1.4-4.2-2-7-2v14c2.8 0 5.2.6 7 2 1.8-1.4 4.2-2 7-2V4c-2.8 0-5.2.6-7 2Z" />
+      <path d="M12 6v14" />
+    </svg>
+  ),
+  overview: (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4v16" />
+      <path d="M19 4v16" />
+      <path d="M5 8c6 0 8 8 14 8" />
+      <path d="M5 16c6 0 8-8 14-8" />
+    </svg>
+  ),
+  index: (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 6h11" />
+      <path d="M9 12h11" />
+      <path d="M9 18h11" />
+      <path d="M4 6h.01" />
+      <path d="M4 12h.01" />
+      <path d="M4 18h.01" />
+    </svg>
+  ),
+};
+
 const INDEX_SLUGS: IndexSection[] = ["atwill", "mason", "wilson", "links"];
 
 function indexSectionFromParam(raw: string | null): IndexSection | null {
@@ -90,6 +138,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [parallels, setParallels] = useState<Parallel[]>([]);
   const [selectedParallelId, setSelectedParallelId] = useState<string | null>(null);
   const [motifPanel, setMotifPanel] = useState<MotifPanelState | null>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(
     () => new URLSearchParams(window.location.search).get("overview") === "1",
   );
@@ -140,7 +189,16 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     const qLeft = viewFromParam(params.get("left"));
     const qRight = viewFromParam(params.get("right"));
     if (qLeft || qRight) {
-      setViews((v) => ({ left: qLeft?.view ?? v.left, right: qRight?.view ?? v.right }));
+      // Keep the existing view object when it's equivalent — a new identity
+      // would re-stream the whole book in static mode.
+      setViews((v) => {
+        const nl = qLeft?.view ?? v.left;
+        const nr = qRight?.view ?? v.right;
+        return {
+          left: sameView(v.left, nl) ? v.left : nl,
+          right: sameView(v.right, nr) ? v.right : nr,
+        };
+      });
       setScrollTargets({ left: qLeft?.target ?? null, right: qRight?.target ?? null });
     }
     const par = params.get("parallel");
@@ -794,71 +852,83 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     return <div className="loading">Loading workspace…</div>;
   }
 
+  const aboutActive = aboutOpen && !startOpen;
+  const indexActive = !!indexSection && !startOpen;
+  const overviewActive = overviewOpen && !startOpen && !indexSection && !aboutOpen;
+  const readingActive = !startOpen && !overviewOpen && !indexSection && !aboutOpen;
+  const goReading = () => {
+    const params = new URLSearchParams(window.location.search);
+    const l = params.get("left") ?? viewToParam(views.left);
+    const r = params.get("right") ?? viewToParam(views.right);
+    const qs = [l && `left=${l}`, r && `right=${r}`].filter(Boolean).join("&");
+    gotoUrl(qs || "reading=1");
+  };
+  const navItems = [
+    { key: "start", label: "Start", active: startOpen, go: () => gotoUrl("start=1") },
+    { key: "reading", label: "Reading", active: readingActive, go: goReading },
+    { key: "overview", label: "Overview", active: overviewActive, go: () => gotoUrl("overview=1") },
+    { key: "index", label: "Index", active: indexActive, go: () => gotoUrl("index=atwill") },
+  ];
+
   return (
     <div className="app">
       <header className="topbar">
         <div className="brand">Typologos</div>
-        <nav className="view-switch">
-          <button
-            className={startOpen ? "active" : ""}
-            onClick={() => {
-              setStartOpen(true);
-              setOverviewOpen(false);
-              setIndexSection(null);
-            }}
-          >
-            Start
-          </button>
-          <button
-            className={!overviewOpen && !startOpen && !indexSection ? "active" : ""}
-            onClick={() => {
-              setOverviewOpen(false);
-              setStartOpen(false);
-              setIndexSection(null);
-            }}
-          >
-            Reading
-          </button>
-          <button
-            className={overviewOpen && !startOpen && !indexSection ? "active" : ""}
-            onClick={() => {
-              setOverviewOpen(true);
-              setStartOpen(false);
-              setIndexSection(null);
-            }}
-          >
-            Overview
-          </button>
-          <button
-            className={indexSection && !startOpen ? "active" : ""}
-            onClick={() => gotoUrl("index=atwill")}
-          >
-            Index
-          </button>
-        </nav>
-        <div className="layer-menu">
-          <button
-            className={`ghost small-ghost ${aboutOpen ? "active" : ""}`}
-            onClick={() => gotoUrl("about=1")}
-          >
+        <nav className="main-nav">
+          {navItems.map((item) => (
+            <button key={item.key} className={item.active ? "active" : ""} onClick={item.go}>
+              {item.label}
+            </button>
+          ))}
+          <button className={`nav-about ${aboutActive ? "active" : ""}`} onClick={() => gotoUrl("about=1")}>
             About
           </button>
+        </nav>
+        <div className="topbar-tools">
           <button
-            className="ghost small-ghost"
-            title="Download your anchors and links as a portable .json file"
-            onClick={() =>
-              api.exportLayerToFile().catch((e) => setError(e instanceof Error ? e.message : String(e)))
-            }
+            className="ghost small-ghost tools-toggle"
+            aria-label="Tools menu"
+            title="Tools"
+            onClick={() => setToolsOpen((o) => !o)}
           >
-            Export layer
+            ⋯
           </button>
-          <button
-            className="ghost small-ghost"
-            title="Import a Typologos layer file (merges; duplicates skipped)"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Import layer
-          </button>
+          {toolsOpen && (
+            <>
+              <div className="tools-backdrop" onClick={() => setToolsOpen(false)} />
+              <div className="tools-pop" role="menu">
+                <button
+                  className="tools-about"
+                  onClick={() => {
+                    setToolsOpen(false);
+                    gotoUrl("about=1");
+                  }}
+                >
+                  About
+                </button>
+                <button
+                  title="Download your anchors and links as a portable .json file"
+                  onClick={() => {
+                    setToolsOpen(false);
+                    api
+                      .exportLayerToFile()
+                      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+                  }}
+                >
+                  Export layer
+                </button>
+                <button
+                  title="Import a Typologos layer file (merges; duplicates skipped)"
+                  onClick={() => {
+                    setToolsOpen(false);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  Import layer
+                </button>
+              </div>
+            </>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -884,6 +954,14 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
           />
         </div>
       </header>
+      <nav className="bottom-nav">
+        {navItems.map((item) => (
+          <button key={item.key} className={item.active ? "active" : ""} onClick={item.go}>
+            {NAV_ICONS[item.key]}
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
       {importNote && (
         <div className="ov-loaded-note" style={{ top: 64 }} onClick={() => setImportNote(null)}>
           {importNote}
