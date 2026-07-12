@@ -22,6 +22,7 @@ import { ParallelInspector } from "./ParallelInspector";
 import { Overview } from "./Overview";
 import { StartScreen } from "./StartScreen";
 import { IndexPage, type IndexSection } from "./IndexPage";
+import { AboutPage } from "./AboutPage";
 import { MotifArcOverlay, type MotifArc } from "./MotifArcOverlay";
 import type { LocalRect } from "../hooks/useAnchorRects";
 
@@ -104,6 +105,9 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
   const [indexSection, setIndexSection] = useState<IndexSection | null>(() =>
     indexSectionFromParam(new URLSearchParams(window.location.search).get("index")),
   );
+  const [aboutOpen, setAboutOpen] = useState(
+    () => new URLSearchParams(window.location.search).get("about") === "1",
+  );
   // Verse block to scroll into view once its pane has rendered (segment id).
   const [scrollTargets, setScrollTargets] = useState<{
     left: string | null;
@@ -132,6 +136,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
     setStartOpen(params.get("start") === "1" || [...params.keys()].length === 0);
     setIndexSection(indexSectionFromParam(params.get("index")));
     setOverviewOpen(params.get("overview") === "1");
+    setAboutOpen(params.get("about") === "1");
     const qLeft = viewFromParam(params.get("left"));
     const qRight = viewFromParam(params.get("right"));
     if (qLeft || qRight) {
@@ -833,6 +838,12 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
         </nav>
         <div className="layer-menu">
           <button
+            className={`ghost small-ghost ${aboutOpen ? "active" : ""}`}
+            onClick={() => gotoUrl("about=1")}
+          >
+            About
+          </button>
+          <button
             className="ghost small-ghost"
             title="Download your anchors and links as a portable .json file"
             onClick={() =>
@@ -881,6 +892,7 @@ export function Workspace({ workspaceId }: WorkspaceProps) {
 
       <div className="workspace-main" ref={mainRef}>
         {startOpen && <StartScreen onClose={() => setStartOpen(false)} />}
+        {aboutOpen && !startOpen && <AboutPage />}
         {indexSection && !startOpen && (
           <IndexPage
             section={indexSection}

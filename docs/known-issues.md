@@ -85,8 +85,11 @@ matches). Recorded per-row in `parallels.verification`.
 - **4 refs skipped** (book token unrecoverable after OCR), **2 refs
   unresolved** (verse absent from KJV corpus — versification edge cases).
   Counts printed by `npm run motifs:import`.
-- Wilson (1957, Moody Press) is likely still under copyright — fine for
-  personal research; resolve before any publishing of the imported data.
+- Wilson (1957, Moody Press) is likely still under copyright. **Decision
+  (2026-07-11)**: the maintainer chose to publish the commentary on the
+  public site under a takedown-on-complaint policy, with a rights-contact
+  path on the About page. `db:publish --strip-rationales` still produces a
+  facts-only build if that stance changes.
 
 ## Josephus corpus (`jos-*`)
 

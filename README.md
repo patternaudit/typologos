@@ -38,11 +38,11 @@ data, run `npm run db:publish` and commit the refreshed
 someone else's file into your store (duplicates skipped). Works in both
 modes.
 
-The public database strips Wilson's rationale prose (his 1957 text is likely
-still under copyright — headwords/refs/grades are facts and remain, so
-underlines, arcs, and the overview all work; the drawer loses his
-commentary). `--keep-rationales` builds a full personal copy — don't publish
-that one.
+The public database includes Wilson's commentary (published deliberately
+under a takedown-on-complaint policy — see the About page; use
+`db:publish --strip-rationales` for a facts-only build) and precomputes the
+Wilson chapter-pair aggregation so the Overview loads in seconds instead of
+recomputing a self-join in the browser.
 
 ## Stack
 

@@ -283,6 +283,20 @@ export class StaticCorpus implements CorpusSource {
     return { scope, label, books, totalVerses };
   }
 
+  // The published database precomputes the Wilson chapter-pair aggregation;
+  // fall back to the live self-join for databases built before that.
+  private hasPairsTable: boolean | null = null;
+
+  private async pairsTableExists(): Promise<boolean> {
+    if (this.hasPairsTable === null) {
+      const rows = await query(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='wilson_chapter_pairs'",
+      );
+      this.hasPairsTable = rows.length > 0;
+    }
+    return this.hasPairsTable;
+  }
+
   async fetchOverviewConnections(left: string, right: string): Promise<OverviewConnection[]> {
     const l = scopeDocumentIds(left);
     const r = scopeDocumentIds(right);
@@ -291,19 +305,27 @@ export class StaticCorpus implements CorpusSource {
     const rightSet = new Set(r.ids);
     const connections: OverviewConnection[] = [];
 
-    const wilsonRows = await query(
-      `SELECT a.document_id ld, a.chapter lc, b.document_id rd, b.chapter rc,
-              COUNT(DISTINCT a.motif_id) AS n,
-              group_concat(DISTINCT m.headword) AS heads
-       FROM motif_instances a
-       JOIN motif_instances b ON b.motif_id = a.motif_id
-       JOIN motifs m ON m.id = a.motif_id
-       WHERE a.document_id IN (${inClause(l.ids.length)})
-         AND b.document_id IN (${inClause(r.ids.length)})
-         AND NOT (a.document_id = b.document_id AND a.chapter = b.chapter)
-       GROUP BY a.document_id, a.chapter, b.document_id, b.chapter`,
-      [...l.ids, ...r.ids],
-    );
+    const wilsonRows = (await this.pairsTableExists())
+      ? await query(
+          `SELECT l_doc ld, l_ch lc, r_doc rd, r_ch rc, n, heads
+           FROM wilson_chapter_pairs
+           WHERE l_doc IN (${inClause(l.ids.length)})
+             AND r_doc IN (${inClause(r.ids.length)})`,
+          [...l.ids, ...r.ids],
+        )
+      : await query(
+          `SELECT a.document_id ld, a.chapter lc, b.document_id rd, b.chapter rc,
+                  COUNT(DISTINCT a.motif_id) AS n,
+                  group_concat(DISTINCT m.headword) AS heads
+           FROM motif_instances a
+           JOIN motif_instances b ON b.motif_id = a.motif_id
+           JOIN motifs m ON m.id = a.motif_id
+           WHERE a.document_id IN (${inClause(l.ids.length)})
+             AND b.document_id IN (${inClause(r.ids.length)})
+             AND NOT (a.document_id = b.document_id AND a.chapter = b.chapter)
+           GROUP BY a.document_id, a.chapter, b.document_id, b.chapter`,
+          [...l.ids, ...r.ids],
+        );
     for (const row of wilsonRows) {
       const heads = (row.heads as string).split(",");
       connections.push({

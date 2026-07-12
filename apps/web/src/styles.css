@@ -982,6 +982,25 @@ button.icon-button { border: none; background: transparent; color: var(--ink-fai
   overflow-y: auto;
 }
 
+/* ---------- about page ---------- */
+
+.about-inner { max-width: 720px; }
+.about-inner h1 { font-size: 28px; margin: 6px 0 12px; }
+.about-inner h2 {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin: 26px 0 8px;
+  border-bottom: 1px solid var(--panel-edge);
+  padding-bottom: 5px;
+}
+.about-inner p { font-size: 14.5px; line-height: 1.7; margin: 0 0 12px; color: var(--ink); }
+.about-lede { font-size: 16px !important; color: var(--ink-soft) !important; }
+.about-inner a { color: var(--accent); }
+.about-inner .verdict-chip { font-size: 9px; padding: 2px 8px; vertical-align: 1px; }
+.small-ghost.active { border-color: var(--highlight-strong); background: #fff8ea; }
+
 /* ---------- start screen ---------- */
 
 .start-screen {

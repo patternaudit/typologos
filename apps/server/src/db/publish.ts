@@ -24,7 +24,10 @@ const OUT = join(OUT_DIR, "typologos-public.sqlite.0");
 const MANIFEST = join(OUT_DIR, "typologos-db.json");
 const TMP = OUT + ".tmp";
 
-const keepRationales = process.argv.includes("--keep-rationales");
+// Wilson's commentary ships by default (deliberate choice: published with a
+// takedown-on-complaint policy, contact path on the About page). Pass
+// --strip-rationales for a facts-only build.
+const stripRationales = process.argv.includes("--strip-rationales");
 
 // Checkpoint the source WAL so the copy is complete.
 {
@@ -41,12 +44,33 @@ fs.copyFileSync(SRC, TMP);
 const db = new DatabaseSync(TMP);
 db.exec("PRAGMA journal_mode = DELETE;");
 
-if (!keepRationales) {
+if (stripRationales) {
   db.exec("UPDATE motif_instances SET rationale = '';");
-  console.log("[publish] Wilson rationales stripped (facts retained)");
+  console.log("[publish] Wilson rationales stripped (facts-only build)");
 } else {
-  console.log("[publish] --keep-rationales: full Wilson prose retained (do NOT publish)");
+  console.log("[publish] Wilson commentary included (takedown-on-complaint policy)");
 }
+
+// Precompute the Wilson chapter-pair aggregation: the overview's heaviest
+// query, identical for every visitor. In-browser it took ~40s cold; as an
+// indexed read it's instant.
+db.exec(`
+  CREATE TABLE wilson_chapter_pairs AS
+  SELECT a.document_id AS l_doc, a.chapter AS l_ch,
+         b.document_id AS r_doc, b.chapter AS r_ch,
+         COUNT(DISTINCT a.motif_id) AS n,
+         group_concat(DISTINCT m.headword) AS heads
+  FROM motif_instances a
+  JOIN motif_instances b ON b.motif_id = a.motif_id
+  JOIN motifs m ON m.id = a.motif_id
+  WHERE NOT (a.document_id = b.document_id AND a.chapter = b.chapter)
+  GROUP BY 1, 2, 3, 4;
+`);
+db.exec("CREATE INDEX idx_wcp_docs ON wilson_chapter_pairs (l_doc, r_doc);");
+const pairCount = (
+  db.prepare("SELECT COUNT(*) c FROM wilson_chapter_pairs").get() as { c: number }
+).c;
+console.log(`[publish] precomputed ${pairCount} wilson chapter pairs`);
 
 db.exec("DELETE FROM anchors;");
 db.exec("DELETE FROM links;");
