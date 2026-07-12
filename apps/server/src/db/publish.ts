@@ -67,6 +67,15 @@ db.exec(`
   GROUP BY 1, 2, 3, 4;
 `);
 db.exec("CREATE INDEX idx_wcp_docs ON wilson_chapter_pairs (l_doc, r_doc);");
+
+// Chapter/verse counts for overview strips and the book list — otherwise the
+// browser scans every verse row (bodies included) just to count them.
+db.exec(`
+  CREATE TABLE chapter_verse_counts AS
+  SELECT document_id, chapter, COUNT(*) AS verses
+  FROM segments WHERE kind = 'verse' GROUP BY document_id, chapter;
+`);
+db.exec("CREATE INDEX idx_cvc_doc ON chapter_verse_counts (document_id);");
 const pairCount = (
   db.prepare("SELECT COUNT(*) c FROM wilson_chapter_pairs").get() as { c: number }
 ).c;

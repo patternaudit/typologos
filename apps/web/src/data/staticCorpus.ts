@@ -175,13 +175,21 @@ function inClause(n: number): string {
 
 export class StaticCorpus implements CorpusSource {
   async fetchBooks(): Promise<BookSummary[]> {
-    const rows = await query(
-      `SELECT d.id, d.title, d.reference,
-              (SELECT COUNT(*) FROM segments s WHERE s.document_id = d.id AND s.kind='chapter') AS chapters
-       FROM documents d
-       WHERE d.id LIKE 'kjv-%' OR d.id LIKE 'jos-%'
-       ORDER BY CASE WHEN d.id LIKE 'kjv-%' THEN 0 ELSE 1 END, d.rowid`,
-    );
+    const rows = (await this.hasTable("chapter_verse_counts"))
+      ? await query(
+          `SELECT d.id, d.title, d.reference,
+                  (SELECT COUNT(*) FROM chapter_verse_counts c WHERE c.document_id = d.id) AS chapters
+           FROM documents d
+           WHERE d.id LIKE 'kjv-%' OR d.id LIKE 'jos-%'
+           ORDER BY CASE WHEN d.id LIKE 'kjv-%' THEN 0 ELSE 1 END, d.rowid`,
+        )
+      : await query(
+          `SELECT d.id, d.title, d.reference,
+                  (SELECT COUNT(*) FROM segments s WHERE s.document_id = d.id AND s.kind='chapter') AS chapters
+           FROM documents d
+           WHERE d.id LIKE 'kjv-%' OR d.id LIKE 'jos-%'
+           ORDER BY CASE WHEN d.id LIKE 'kjv-%' THEN 0 ELSE 1 END, d.rowid`,
+        );
     return rows.map((r, i) => ({
       id: r.id as string,
       title: r.title as string,
@@ -252,12 +260,19 @@ export class StaticCorpus implements CorpusSource {
   async fetchOverviewStructure(scope: string): Promise<OverviewStructure> {
     const def = scopeDocumentIds(scope);
     if (!def) throw new Error(`unknown scope: ${scope}`);
-    const rows = await query(
-      `SELECT document_id, chapter, COUNT(*) AS verses FROM segments
-       WHERE kind = 'verse' AND document_id IN (${inClause(def.ids.length)})
-       GROUP BY document_id, chapter ORDER BY document_id, chapter`,
-      def.ids,
-    );
+    const rows = (await this.hasTable("chapter_verse_counts"))
+      ? await query(
+          `SELECT document_id, chapter, verses FROM chapter_verse_counts
+           WHERE document_id IN (${inClause(def.ids.length)})
+           ORDER BY document_id, chapter`,
+          def.ids,
+        )
+      : await query(
+          `SELECT document_id, chapter, COUNT(*) AS verses FROM segments
+           WHERE kind = 'verse' AND document_id IN (${inClause(def.ids.length)})
+           GROUP BY document_id, chapter ORDER BY document_id, chapter`,
+          def.ids,
+        );
     const titleRows = await query(
       `SELECT id, title FROM documents WHERE id IN (${inClause(def.ids.length)})`,
       def.ids,
@@ -283,18 +298,22 @@ export class StaticCorpus implements CorpusSource {
     return { scope, label, books, totalVerses };
   }
 
-  // The published database precomputes the Wilson chapter-pair aggregation;
-  // fall back to the live self-join for databases built before that.
-  private hasPairsTable: boolean | null = null;
+  // The published database precomputes heavy aggregations (chapter pairs,
+  // verse counts); fall back to live queries for databases built before.
+  private precomputed: Set<string> | null = null;
 
-  private async pairsTableExists(): Promise<boolean> {
-    if (this.hasPairsTable === null) {
+  private async hasTable(name: string): Promise<boolean> {
+    if (this.precomputed === null) {
       const rows = await query(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='wilson_chapter_pairs'",
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('wilson_chapter_pairs','chapter_verse_counts')",
       );
-      this.hasPairsTable = rows.length > 0;
+      this.precomputed = new Set(rows.map((r) => r.name as string));
     }
-    return this.hasPairsTable;
+    return this.precomputed.has(name);
+  }
+
+  private pairsTableExists(): Promise<boolean> {
+    return this.hasTable("wilson_chapter_pairs");
   }
 
   async fetchOverviewConnections(left: string, right: string): Promise<OverviewConnection[]> {
