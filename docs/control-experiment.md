@@ -94,5 +94,84 @@ constraints, with the same verification standard applied afterward.
 
 ## Results
 
-*(To be added after the mining and verification passes. Nothing above this
-line may change.)*
+**Run 2026-07-12** (rules committed `e8dec4f`, 2026-07-12 00:35 CDT, before
+any mining). One systematic pass: seven parallel miners, one per Anabasis
+book, each reading all of Luke against its book; then mechanical quote
+verification; then a grading pass applying the Atwill-layer standard.
+
+### Headline numbers
+
+| | Atwill (Flavian Signature) | Control (Luke ↔ Anabasis) |
+|---|---|---|
+| Claims | 34 (curated over years) | **184** (one pre-registered pass) |
+| Supported | 21 | **123** |
+| Partial | 13 | **61** |
+| Unsupported | 0 | 0 |
+| Quote fidelity | 33/34 verbatim, 1 paraphrase | **184/184 verbatim** (mechanically checked) |
+| Order-preserving sequence | 34 claimed | **21** (18 among supported-only) — found *incidentally*, with no effort spent optimizing for order |
+
+Every candidate the miners kept survived grading at the same bar used on
+the Atwill layer: *supported* = the claimed concrete elements are literally
+present in both cited passages; *partial* = quotes faithful, correspondence
+carried by interpretive/typological framing. 0 unsupported mirrors the
+Atwill result for the same reason: motivated miners self-filter fabrications
+out before publishing.
+
+### What one book yields
+
+Candidates per Anabasis book: 26, 26, 25, 26, 28, 25, 28. **Any single book
+of Xenophon out-yields the entire Flavian Signature** in supported parallels
+at the same standard.
+
+### Specimen results (all quotes verbatim)
+
+- **The betrayal supper** — Tissaphernes "with kindliest expression"
+  entertains Clearchus at dinner and then has him seized at a signal;
+  "the hand of him that betrayeth me is with me on the table" (Luke 22:21
+  ↔ Anab 2.5.24). *Supported.*
+- **Reckoned among the transgressors** — Clearchus, whom the narrator holds
+  innocent, is officially declared a perjurer and truce-breaker and executed
+  (Luke 22:37 ↔ Anab 2.5.32). *Supported.*
+- **The third day** — the Hellenes wait "troubled with anxieties" until "on
+  the third day he arrived with the news… he was permitted to save the
+  Hellenes" (Luke 24:21 ↔ Anab 2.3.23). *Supported.*
+- **Crucified royal claimant** — the Persian king nails the severed head and
+  hand of his brother, the pretender to the throne, to a cross (Luke 23:38
+  ↔ Anab 3.1.13). *Supported.*
+- **Darkness at the fall** — "a cloud hid the face of the sun and blotted
+  out the light thereof, until…" the city was taken (Luke 23:44 ↔ Anab
+  3.4.3). *Supported.*
+- **The honeycomb** — honey-poisoned soldiers lie "apparently at death's
+  door" and "on the third or fourth day got on their legs again"; the
+  third-day risen one eats "a piece of a broiled fish, and of an honeycomb"
+  (Luke 24:42 ↔ Anab 4.8.16). *Supported.*
+- **Exactly threescore furlongs** — a night journey of "sixty furlongs"
+  ending in dawning recognition (Luke 24:13 ↔ Anab 7.2.15). *Supported.*
+- **Ten servants / ten generals** — ten commanders each assigned a
+  settlement, then the reckoning, "some with somewhat to show for their
+  pains, others empty-handed" (Luke 19:13 ↔ Anab 6.3.1). *Supported.*
+
+### Reading
+
+The Flavian Signature's evidential engine is the claim that its parallels
+are too many, too specific, and too well-ordered to be chance. The control
+measures that intuition against a base rate: at the same evidential bar,
+Luke against a genre-matched text *nobody* claims Luke read yields **5×
+the claims and 6× the supported parallels of the Signature in a single
+pass**, including a 21-step order-preserving sequence that nobody was
+looking for. Whatever the Signature's 34 steps demonstrate, they do not
+demonstrate more than what the method itself produces from noise —
+shared genre furniture (armies, betrayals, meals, sieges, executions,
+omens), translation-era English, and a motivated reader.
+
+The same caution cuts both ways and is stated in the layer's UI: the
+control measures the *method*, not any real dependence of Luke on Xenophon
+— and by construction it cannot prove Luke *didn't* use Josephus; it shows
+only that this kind of evidence cannot establish that he did.
+
+### Data
+
+The full graded layer is `apps/server/src/corpus/control-anabasis.json`
+(`npm run control:import`), rendered in-app as the **Control (Anabasis)**
+layer — teal — in the Overview, Index, and Reading views. The public build
+excludes it until review (`db:publish --include-control` to ship).
