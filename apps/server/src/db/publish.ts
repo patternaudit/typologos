@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -20,9 +21,11 @@ const OUT_DIR = join(__dirname, "..", "..", "..", "web", "public");
 // Served as a single-chunk "chunked" database: the manifest carries the byte
 // length, so the browser never needs a HEAD request (GitHub Pages gzips
 // octet-streams for browsers, which hides the true Content-Length).
-const OUT = join(OUT_DIR, "typologos-public.sqlite.0");
+// The filename carries a content hash: GitHub Pages caches with max-age=600,
+// so an unversioned name lets a browser mix cached chunks of the previous
+// database with a fresh manifest — "database disk image is malformed".
 const MANIFEST = join(OUT_DIR, "typologos-db.json");
-const TMP = OUT + ".tmp";
+const TMP = join(OUT_DIR, "typologos-public.sqlite.tmp");
 
 // Wilson's commentary ships by default (deliberate choice: published with a
 // takedown-on-complaint policy, contact path on the About page). Pass
@@ -38,7 +41,6 @@ const stripRationales = process.argv.includes("--strip-rationales");
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.rmSync(TMP, { force: true });
-fs.rmSync(OUT, { force: true });
 fs.copyFileSync(SRC, TMP);
 
 const db = new DatabaseSync(TMP);
@@ -95,14 +97,18 @@ db.exec("PRAGMA page_size = 4096;");
 db.exec("VACUUM;");
 db.close();
 
+const bytes = fs.readFileSync(TMP);
+const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 8);
+const prefix = `typologos-public-${hash}.sqlite.`;
+const OUT = join(OUT_DIR, prefix + "0");
 fs.renameSync(TMP, OUT);
-const size = fs.statSync(OUT).size;
+const size = bytes.length;
 fs.writeFileSync(
   MANIFEST,
   JSON.stringify(
     {
       serverMode: "chunked",
-      urlPrefix: "typologos-public.sqlite.",
+      urlPrefix: prefix,
       serverChunkSize: size,
       databaseLengthBytes: size,
       suffixLength: 1,
@@ -112,6 +118,15 @@ fs.writeFileSync(
     1,
   ),
 );
-// Drop the old single-file name if present (pre-manifest layout).
-fs.rmSync(join(OUT_DIR, "typologos-public.sqlite"), { force: true });
+// Keep the previous database alongside the new one (a manifest cached for up
+// to 10 minutes still resolves); prune anything older, plus legacy names.
+const versions = fs
+  .readdirSync(OUT_DIR)
+  .filter((f) => /^typologos-public.*\.sqlite(\.0)?$/.test(f) && f !== prefix + "0")
+  .map((f) => ({ f, mtime: fs.statSync(join(OUT_DIR, f)).mtimeMs }))
+  .sort((a, b) => b.mtime - a.mtime);
+for (const v of versions.slice(1)) {
+  fs.rmSync(join(OUT_DIR, v.f));
+  console.log(`[publish] pruned old version ${v.f}`);
+}
 console.log(`[publish] wrote ${OUT} (${(size / 1024 / 1024).toFixed(1)} MB) + manifest`);

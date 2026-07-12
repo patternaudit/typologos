@@ -29,7 +29,9 @@ const BASE =
 // so no HEAD request is needed — some CDNs (GitHub Pages) gzip octet-streams
 // for browsers, which masks the true Content-Length and breaks length
 // discovery. Range GETs are served identity-encoded everywhere.
-const DB_CONFIG_URL = BASE + "typologos-db.json";
+// Cache-busted so it always points at the current content-hashed database
+// file (Pages caches for 10 minutes; the ~200-byte refetch is free).
+const DB_CONFIG_URL = BASE + "typologos-db.json?v=" + Date.now();
 const WORKER_URL = BASE + "sqlite.worker.js";
 const WASM_URL = BASE + "sql-wasm.wasm";
 

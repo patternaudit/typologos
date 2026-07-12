@@ -31,7 +31,9 @@ npm run build:static -w @typologos/web    # production bundle (deploy dist/ + pu
 (`.github/workflows/pages.yml`). The published database is committed, so CI
 never needs the (untracked, copyrighted) Wilson source text — after changing
 data, run `npm run db:publish` and commit the refreshed
-`apps/web/public/typologos-public.sqlite`.
+`apps/web/public/typologos-public-<hash>.sqlite.0` + manifest (the filename
+is content-hashed so a browser can never mix cached chunks of two versions;
+the previous version is kept one deploy for still-cached manifests).
 
 **Portable layers**: *Export layer* downloads your anchors + links as a
 `typologos-layer-*.json` file (Excalidraw-style); *Import layer* merges
