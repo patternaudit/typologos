@@ -4,5 +4,5 @@
  "serverChunkSize": 22843392,
  "databaseLengthBytes": 22843392,
  "suffixLength": 1,
- "requestChunkSize": 4096
+ "requestChunkSize": 65536
 }

@@ -33,8 +33,8 @@ export function LoadingIndicator({ label = "Loading…" }: { label?: string }) {
       </div>
       {dataMode === "static" && (
         <div className="loading-hint">
-          The database streams in small pages on demand — the first visit takes a few seconds;
-          return visits are cached.
+          The database streams in on demand — only the pages this view needs, never the whole
+          corpus.
         </div>
       )}
     </div>

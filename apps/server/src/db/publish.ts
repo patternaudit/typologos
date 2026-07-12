@@ -112,7 +112,9 @@ fs.writeFileSync(
       serverChunkSize: size,
       databaseLengthBytes: size,
       suffixLength: 1,
-      requestChunkSize: 4096,
+      // 16 pages per fetch: CDN round-trip latency dominates (measured
+      // ~55ms/request serialized), so fewer+bigger beats page-granular.
+      requestChunkSize: 65536,
     },
     null,
     1,
