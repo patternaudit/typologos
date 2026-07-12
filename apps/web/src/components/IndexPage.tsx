@@ -144,7 +144,11 @@ export function IndexPage({
         <div className="index-head">
           <h1>Index</h1>
           <nav className="index-tabs">
-            {INDEX_SECTIONS.map((s) => (
+            {INDEX_SECTIONS.filter(
+              (s) =>
+                s.slug !== "control" ||
+                parallels.some((p) => p.source === "control-anabasis"),
+            ).map((s) => (
               <button
                 key={s.slug}
                 className={s.slug === section ? "active" : ""}
