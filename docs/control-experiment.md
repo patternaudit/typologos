@@ -175,3 +175,57 @@ The full graded layer is `apps/server/src/corpus/control-anabasis.json`
 (`npm run control:import`), rendered in-app as the **Control (Anabasis)**
 layer — teal — in the Overview, Index, and Reading views. The public build
 excludes it until review (`db:publish --include-control` to ship).
+
+---
+
+# Second arm (pre-registered before its mining pass): blinded Luke ↔ Wars
+
+**Registered 2026-07-12, after the Anabasis arm's results, before any
+arm-2 mining.**
+
+## Motivation
+
+Two observations after arm 1:
+
+1. **Geography.** The Flavian Signature claims its parallels co-locate —
+   Luke's episodes and the campaign's events track the same places
+   (Galilee, the lake, the road up, Jerusalem). The Anabasis control could
+   not reproduce that dimension: Xenophon's route runs through Mesopotamia
+   and Armenia. But Luke and the *War* are set in the same small country in
+   the same generation, so some co-location comes free with the setting.
+   The second arm measures how much.
+2. **Yield on the actual pair.** Arm 1 measured the method's yield against
+   an unrelated text. Running the identical rules against Josephus's *Wars*
+   measures the size of the space Atwill was selecting his 34 from — and,
+   separately, how many of his 34 a blinded pass rediscovers.
+
+## Protocol deltas from arm 1 (everything else identical)
+
+- **Corpus.** Luke (KJV) against *Wars of the Jews* books 1–7 (Whiston) —
+  seven books, like the Anabasis; one miner per book, one pass.
+- **Blinding.** Arm 1's prompts used Atwill's own claims as calibration
+  examples; that would contaminate arm 2. Calibration examples are replaced
+  with arm-1 (Anabasis) specimens. Miners are instructed not to reproduce
+  remembered claims from any published parallel literature (Atwill, Mason,
+  etc.); any candidate the miner suspects matches published work is still
+  reported if the texts support it, but flagged `possiblyKnown` and tracked
+  separately. LLM training exposure cannot be fully removed — the same
+  limitation stated for arm 1, now sharper; the `possiblyKnown` flag and
+  the rediscovery analysis make it measurable rather than invisible.
+- **Geography.** Miners tag the named location of each side's passage
+  (`lukePlace`, `otherPlace`) when the text names one. Post-hoc scoring:
+  fraction of kept parallels whose two sides name the same or adjacent
+  places. The same tagging is applied retroactively to arm 1 for
+  comparison.
+- **Analyses, fixed in advance:** (a) tally at the identical grading
+  standard; (b) longest order-preserving sequence; (c) geographic
+  co-location rate, arm 2 vs arm 1; (d) rediscovery: how many of Atwill's
+  34 steps appear (same or overlapping passage pairs) in the blinded yield;
+  (e) overlap flagged `possiblyKnown` vs not.
+- **Grading.** Same grader (the maintainer's assistant), same standard,
+  aware of Atwill's 34 — stated as a limitation; the mechanical quote check
+  is bias-free.
+
+## Arm-2 results
+
+*(To be added after the pass. Nothing above this line may change.)*
