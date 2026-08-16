@@ -162,6 +162,15 @@ against the mask with no per-dot adjustment, and the result reported either
 way. This is the experiment Menasgotz's own "check my work" ethos invites,
 and it is a better test than any calculation over his own catalog can be.
 
+**Outcome (added 2026-08-15, after the registration above).** The blinded
+arm-2 pass produced 133 mechanically verified parallels. Plotted against
+an APTVS mask calibrated to Menasgotz's own stated 25% chart coverage,
+they land on the mask **30/133 = 22.6%** — statistically indistinguishable
+from chance (z = −0.65). The blinded yield also reproduced, for free, the
+properties the thesis treats as designed: a 20-step same-order sequence
+and 42% geographic co-location. Full data and protocol:
+`control-experiment.md`, arm-2 results.
+
 ## 7. Verdict
 
 - The parallels are real as *textual observations*, and many are graded
