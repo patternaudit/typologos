@@ -225,6 +225,13 @@ Two observations after arm 1:
 - **Grading.** Same grader (the maintainer's assistant), same standard,
   aware of Atwill's 34 — stated as a limitation; the mechanical quote check
   is bias-free.
+- **Amendment (2026-08-15, before books 1–6 were mined).** The first
+  arm-2 mining attempt (2026-07-12) completed only book 7 before hitting
+  usage limits; the book-7 miner ran on the same model as all arm-1 miners
+  (Claude Fable). Books 1–6 are re-run on Claude Sonnet to conserve quota.
+  Model per book is recorded with the data; if Sonnet books yield
+  systematically differently from the Fable book, that is reported rather
+  than smoothed over.
 
 ## Arm-2 results
 
