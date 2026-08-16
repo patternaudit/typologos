@@ -235,4 +235,69 @@ Two observations after arm 1:
 
 ## Arm-2 results
 
-*(To be added after the pass. Nothing above this line may change.)*
+**Run completed 2026-08-15.** Seven blinded miners (book 7 on Fable
+2026-07-12; books 1–6 on Sonnet per the amendment), one pass each; then the
+mechanical quote check and a grading pass at the identical standard.
+
+### Yield
+
+| | Atwill (curated, years) | Arm 2 (one blinded pass) |
+|---|---|---|
+| Claims | 34 | 160 mined, **133 verified** |
+| Supported | 21 | **79** |
+| Partial | 13 | **54** |
+| Unsupported | 0 | 0 |
+| Quote fidelity | 33/34 verbatim | 153/160 verbatim (7 dropped: trivial abridgements/case changes, no invented content) |
+
+Per model: Fable (book 7): 29/29 verbatim, 22 supported / 7 partial.
+Sonnet (books 1–6): 124/131 verbatim, 57 supported / 47 partial — lower
+per-book yield and support rate than the Fable book, as the amendment
+anticipated might occur; reported, not smoothed.
+
+The blinded pass over the same two texts out-yields the Flavian Signature
+roughly 4× in claims and nearly 4× in supported parallels. Specimens the
+blind pass surfaced that Atwill's 34 do not use: Mary of Bethezob's "Come,
+eat of this food; for I have eaten of it myself" beside "This is my body
+which is given for you"; the Masada dawn scene (women emerging from under
+the ground to report the dead to men who "believed them not" until they
+went in); Jesus ben Ananias's silence before the procurator; Emmaus at
+exactly threescore furlongs (three independent rediscoveries); a man in
+white appearing out of the ground where the temple stood.
+
+### Pre-registered analyses
+
+- **(b) Sequence.** Longest order-preserving subsequence of the 133 blinded
+  rows: **20** (arm 1 against Xenophon: 21 of 184). Same-order "sequences"
+  of this length arise from any such yield; the Signature's ordering is not
+  distinctive.
+- **(c) Geography.** Of rows with place tags on both sides, **42%
+  co-locate** (overwhelmingly Jerusalem↔Jerusalem, plus shared toponyms:
+  Emmaus, Nain, Mount of Olives, Jericho, the wilderness). Arm 1's
+  co-location is ~0% by construction (Xenophon's route never enters
+  Palestine). Conclusion: the Signature's geographic tracking is what
+  shared setting produces automatically — two narratives set in the same
+  small country co-locate at high rates with no dependence required.
+- **(d) Rediscovery.** Blinded miners independently rediscovered **14 of
+  Atwill's 34** steps (same Luke chapter, same Wars book ±1 chapter). His
+  parallels are partially salient, but 119 of the 133 blinded rows are
+  pairs his sequence does not use — his 34 sample a far larger space.
+- **(e) possiblyKnown.** 59/133 flagged — the blinding is honest about its
+  leakage, and the rediscovery figure above is robust to it (most
+  rediscoveries were flagged).
+- **APTVS mask test (registered in `menasgotz-aptvs-review.md` §6).** The
+  APTVS letterforms were approximated as stroke corridors calibrated to
+  cover 25.2% of the chart (Menasgotz's own stated coverage). The 133
+  blinded dots land on the mask **30 times = 22.6%**, against ~25% expected
+  by chance (z = −0.65). **Blinded parallels show no attraction whatever to
+  the APTVS pattern.** The pattern is an artifact of unblinded selection
+  and per-dot placement freedom, not a property of the texts.
+
+### Reading
+
+Arm 1 showed the method yields Signature-grade parallels against an
+unrelated text. Arm 2 shows that on the *actual* text pair, one blinded
+pass yields 4× the Signature — with the same-order property, the
+geographic co-location, and none of the APTVS pattern coming along for
+free. Together the arms measure precisely what parallelomania intuitions
+miss: the base rate is enormous, order is cheap, geography is setting, and
+the pattern lives in the analyst, not the author.
