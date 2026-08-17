@@ -292,6 +292,20 @@ white appearing out of the ground where the temple stood.
   the APTVS pattern.** The pattern is an artifact of unblinded selection
   and per-dot placement freedom, not a property of the texts.
 
+### Addendum: the sequence-length null (added 2026-08-16)
+
+The order-preservation result has a closed-form check. For n points paired
+at random, the expected longest ordered chain is ~2√n (Vershik–Kerov). Our
+blinded data: n = 133, observed longest chain **20**; shuffled-null (same
+endpoints, random re-pairing, 200 trials) mean **19.9**, range 16–25. The
+blinded parallels are exactly as ordered as chance — not one step more.
+Corollary: a 34-step ordered sequence (the Flavian Signature's length)
+is expected by chance in any candidate pool of ~(34/2)² ≈ 290 parallels.
+One blinded pass produced 133; Menasgotz's own catalog claims 300–400.
+Registered prediction: mine the blinded pool to ~300 candidates and the
+longest blind sequence should rise through ~35. If it plateaus well below,
+that would be evidence *for* an authored sequence.
+
 ### Reading
 
 Arm 1 showed the method yields Signature-grade parallels against an
